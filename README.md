@@ -8,6 +8,18 @@ The package prioritizes meaning preservation. It can clean, segment, simplify st
 
 The package name is `accessible-reading-writing-plugin`. Its skill names use the `accessibility-*` prefix so this plugin can be enabled beside Research Book Skills without shadowing skills such as `reading-load-reducer`.
 
+## Source
+
+Public repository: [CoveMB/accessible-reading-writing-skills-plugin](https://github.com/CoveMB/accessible-reading-writing-skills-plugin).
+
+To install from a fresh checkout:
+
+```bash
+git clone https://github.com/CoveMB/accessible-reading-writing-skills-plugin.git
+cd accessible-reading-writing-skills-plugin
+./install.sh
+```
+
 ## Install
 
 From this folder:
@@ -82,3 +94,7 @@ Private notes, drafts, transcripts, and sensitive documents should not be sent t
 ## Uninstall
 
 Remove `~/.codex/plugins/accessible-reading-writing-plugin`, then remove the `accessible-reading-writing-plugin` entry from `~/.agents/plugins/marketplace.json`.
+
+## License
+
+[MIT](LICENSE)
