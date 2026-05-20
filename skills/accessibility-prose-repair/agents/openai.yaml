@@ -1,0 +1,14 @@
+interface:
+  display_name: "Accessible Prose Repair"
+  short_description: "Use when existing prose needs meaning-preserving spelling, grammar, punctuation, sentence-boundary, paragraph-break, typo, or local readability repair for dyslexic, dysorthographic, low-load, or accessibility-focused writing support."
+  default_prompt: "Use accessibility-prose-repair to repair spelling, grammar, punctuation, sentence boundaries, paragraph breaks, and readability without changing my meaning."
+policy:
+  allow_implicit_invocation: true
+  task_type: "accessibility-skill"
+  data_access_level: "user-provided-or-public-metadata"
+  confidentiality_gate: "required-before-external-lookup"
+  lookup_consent_required: true
+  private_payloads_external: "requires-explicit-consent"
+  artifact_sensitivity: "user-writing-and-notes"
+  external_lookup_allowed: "route-only"
+  allowed_external_payloads: "routing-targets-and-nonsensitive-summary-only"

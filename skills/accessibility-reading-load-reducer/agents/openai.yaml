@@ -1,0 +1,14 @@
+interface:
+  display_name: "Reading Load Reducer"
+  short_description: "Use when dense documents, long emails, instructions, policies, articles, source packets, reading lists, or long notes need low-load read-skim-park-skip triage, close-reading targets, extraction priorities, uncertainty labels, and next actions."
+  default_prompt: "Use accessibility-reading-load-reducer to triage this dense material into read closely, skim, park, or skip, with reliance limits and next actions."
+policy:
+  allow_implicit_invocation: true
+  task_type: "accessibility-skill"
+  data_access_level: "user-provided-or-public-metadata"
+  confidentiality_gate: "required-before-external-lookup"
+  lookup_consent_required: true
+  private_payloads_external: "requires-explicit-consent"
+  artifact_sensitivity: "user-writing-and-notes"
+  external_lookup_allowed: "conditional"
+  allowed_external_payloads: "public-identifiers-search-terms-and-nonsensitive-short-summaries"

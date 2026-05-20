@@ -1,0 +1,45 @@
+{
+  "name": "accessible-reading-writing-plugin",
+  "version": "1.0.0",
+  "description": "Agent Skills plugin for accessible reading and writing support across everyday, work, learning, and research contexts.",
+  "author": {
+    "name": "Cove"
+  },
+  "license": "MIT",
+  "keywords": [
+    "accessibility",
+    "dyslexia",
+    "dysorthographia",
+    "dictation",
+    "reading-load",
+    "prose-repair",
+    "low-load",
+    "notes",
+    "plain-language",
+    "writing-support",
+    "meaning-preservation",
+    "privacy",
+    "verification"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Accessible Reading and Writing",
+    "shortDescription": "Accessible reading, dictation cleanup, prose repair, and dyslexia-friendly writing support.",
+    "longDescription": "A local plugin with focused Agent Skills for accessible reading and writing support. It supports dyslexic, dysorthographic, dictation-heavy, reading-fatigued, and context-switching users by turning rough thoughts, transcripts, dense documents, and typo-heavy prose into scan-friendly notes, repair passes, triage tables, ambiguity checks, and next actions without changing the user's meaning.",
+    "developerName": "Generated local package",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "brandColor": "#334155",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/logo.svg",
+    "defaultPrompt": [
+      "Use accessibility-low-load-companion to choose the smallest helpful accessibility step when dictation, reading load, spelling ambiguity, or rough notes overlap.",
+      "Use accessibility-dictation-notes to turn this voice transcript or spoken fragment into cleaned notes, decisions, questions, ambiguities, and next actions.",
+      "Use accessibility-reading-load-reducer to triage this dense material into read closely, skim, park, or skip with verification limits.",
+      "Use accessibility-prose-repair to fix spelling, grammar, punctuation, sentence boundaries, and paragraph breaks without changing meaning."
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+interface:
+  display_name: "Accessibility Companion"
+  short_description: "Route mixed or unclear accessibility bottlenecks for dyslexic, dysorthographic, dictation-heavy, reading-fatigued, or overwhelmed users when rough notes, voice material, dense documents, spelling ambiguity, or next-step friction overlap."
+  default_prompt: "Use accessibility-low-load-companion to choose the smallest helpful accessibility step when dictation, reading load, spelling ambiguity, rough notes, or next-step friction overlap."
+policy:
+  allow_implicit_invocation: true
+  task_type: "accessibility-skill"
+  data_access_level: "user-provided-or-public-metadata"
+  confidentiality_gate: "required-before-external-lookup"
+  lookup_consent_required: true
+  private_payloads_external: "requires-explicit-consent"
+  artifact_sensitivity: "user-writing-and-notes"
+  external_lookup_allowed: "route-only"
+  allowed_external_payloads: "routing-targets-and-nonsensitive-summary-only"

@@ -1,0 +1,14 @@
+interface:
+  display_name: "Dictation to Notes"
+  short_description: "Use when dictated thoughts, voice transcripts, speech-to-text output, meeting notes, auto-captions, or rambling spoken fragments need to become structured notes, decisions, questions, ambiguities, and next actions without changing meaning."
+  default_prompt: "Use accessibility-dictation-notes to turn this voice transcript or spoken fragment into cleaned notes, decisions, questions, ambiguities, and next actions without changing my meaning."
+policy:
+  allow_implicit_invocation: true
+  task_type: "accessibility-skill"
+  data_access_level: "user-provided-or-public-metadata"
+  confidentiality_gate: "required-before-external-lookup"
+  lookup_consent_required: true
+  private_payloads_external: "requires-explicit-consent"
+  artifact_sensitivity: "user-writing-and-notes"
+  external_lookup_allowed: "route-only"
+  allowed_external_payloads: "routing-targets-and-nonsensitive-summary-only"
