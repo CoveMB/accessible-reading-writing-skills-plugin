@@ -2,6 +2,8 @@
 
 Use this file when you already know the rough shape of the work and need the right skill. Use `docs/ROUTING_MATRIX.md` for canonical automatic routing.
 
+For concrete prompt examples and usage contexts, see `docs/SKILL_USAGE_EXAMPLES.md`.
+
 | Skill folder | Display name | When to use |
 |---|---|---|
 | `accessibility-low-load-companion` | Accessibility Companion | Route mixed or unclear accessibility bottlenecks when rough notes, dictation, reading load, spelling ambiguity, or next-step friction overlap and no smaller accessibility skill clearly owns the task. |

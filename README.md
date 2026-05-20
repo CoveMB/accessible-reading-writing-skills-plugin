@@ -61,6 +61,8 @@ Earlier local drafts used the package names `accessibility-plugin` and `low-load
 
 ## Example prompts
 
+For fuller usage contexts and prompt patterns, see `docs/SKILL_USAGE_EXAMPLES.md`.
+
 ```text
 Use accessibility-low-load-companion. I have rough notes, a transcript fragment, and too much to read. Choose the smallest useful next step.
 ```
