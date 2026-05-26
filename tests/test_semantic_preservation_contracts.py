@@ -75,6 +75,25 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
 
         self.assertEqual([], failures)
 
+    def test_fixture_covers_review_requested_semantic_risks(self) -> None:
+        cases = self.load_fixture()["cases"]
+        fixture_text = json.dumps(cases).lower()
+
+        required_fragments = (
+            "i do not want to cancel the appointment",
+            "maybe i should tell alex, but i'm not sure",
+            "my manager said the report might be due friday",
+            "grammar only",
+            "shareable wording",
+            "title/citation/metadata only",
+            "search result snippet only",
+            "citation only",
+        )
+
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, fixture_text)
+
 
 class SemanticPreservationSchemaTests(unittest.TestCase):
     def test_schema_rejects_duplicate_and_unstable_ids(self) -> None:
@@ -1335,6 +1354,36 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         self.assertIn("required_access_level", messages)
         self.assertIn("triage_only_warning", messages)
         self.assertIn("prohibited_verification_claims", messages)
+
+    def test_checker_rejects_requested_review_risk_regressions(self) -> None:
+        unsafe_outputs = {
+            "prose_cancel_negation_015": (
+                "# Prose repair\n\n"
+                "I want to cancel the appointment.\n\n"
+                "Review note: formatting only."
+            ),
+            "prose_tell_alex_uncertainty_016": (
+                "# Prose repair\n\n"
+                "I should tell Alex.\n\n"
+                "Review note: direct action made clear."
+            ),
+            "prose_report_due_claim_strength_017": (
+                "# Prose repair\n\n"
+                "My manager said the report is due Friday.\n\n"
+                "Review note: deadline clarified."
+            ),
+            "prose_grammar_only_style_018": (
+                "# Prose repair\n\n"
+                "I strongly oppose the plan, and we need to escalate it now.\n\n"
+                "Review note: grammar fixed."
+            ),
+        }
+
+        for case_id, output in unsafe_outputs.items():
+            with self.subTest(case_id=case_id):
+                failures = self.failures_for(output, self.fixture_case(case_id))
+
+                self.assertNotEqual([], failures)
 
 
 class SemanticPreservationCliTests(unittest.TestCase):

@@ -48,7 +48,7 @@ Treat transcript cleanup as surface repair. If a transcript error can change mea
 
 ## Compact output
 
-Use compact output when the user asks for low reading load, when the transcript is short, or when a full report would add friction. Compact output should use short chunks, stable labels, one cleaned note table, ambiguity only if needed, and one next action.
+Use compact output by default for low-risk dictation cleanup, short transcripts, or cases where a full report would add friction. Compact output should use short chunks, stable labels, one source-basis line when relevant, one cleaned note table, uncertainty and ambiguity only if meaning could change, privacy or verification limits when relevant, and one useful next action only when it reduces friction.
 
 ## Files/folders it may read
 
@@ -98,6 +98,12 @@ Repair obvious speech-to-text noise, punctuation, and sentence boundaries. Prese
 
 If a phrase has several plausible meanings, keep the original fragment and mark the ambiguity.
 
+### 3.5. Use verbatim anchor mode when wording risk is high
+
+Verbatim anchor mode means keeping short original fragments or redacted anchors beside cleaned notes when exact wording may matter or meaning could be contested.
+
+Use it for commitments, dates, names, refusals, permissions, privacy, obligations, emotionally loaded statements, workplace/meeting notes, legal/medical/financial-adjacent notes, or source-sensitive material. Keep the anchor short and avoid exposing more private detail than needed for review.
+
 ### 4. Build notes
 
 Create a short table with:
@@ -120,6 +126,25 @@ If the cleaned notes reveal a clear next step, suggest one skill:
 
 ## Output format
 
+Default compact output:
+
+```markdown
+# Dictation notes
+
+Source basis: [one line when relevant]
+How to use this result: TRIAGE ONLY - [include only when capture could be mistaken for verified advice or shareable wording]
+
+| Note | Type | Ambiguity | Next action |
+
+Privacy or verification limit: [only when relevant]
+Review needed: [uncertainty or ambiguity only if it could change meaning]
+Next action: [one useful next action only when it reduces friction]
+```
+
+Expanded output:
+
+Use expanded output when the task is high-stakes, evidence-sensitive, public-facing, workplace-sensitive, legal/medical/financial-adjacent, publication-related, source-sensitive, or when exact wording and anchors need fuller review.
+
 ```markdown
 # Dictation to notes
 
@@ -138,17 +163,4 @@ If the cleaned notes reveal a clear next step, suggest one skill:
 ## What remains uncertain
 
 ## User verification needed
-```
-
-Compact output:
-
-```markdown
-# Dictation notes
-
-Source basis: [one line]
-How to use this result: TRIAGE ONLY - Use this only as cleaned notes from visible meaning; do not treat it as verification.
-
-| Note | Type | Ambiguity | Next action |
-
-Next action: [first useful action]
 ```

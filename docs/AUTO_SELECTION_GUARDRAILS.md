@@ -6,7 +6,8 @@ Use this policy when deciding whether an accessibility skill should trigger auto
 
 - Prefer the smallest useful skill over a broad sequence.
 - Prefer `accessibility-dictation-notes`, `accessibility-reading-load-reducer`, or `accessibility-prose-repair` when one clear bottleneck owns the request.
-- Use `accessibility-low-load-companion` when dictation, reading load, spelling ambiguity, rough notes, planning friction, or next-step uncertainty overlap.
+- Use `accessibility-low-load-companion` only when the bottleneck is mixed or unclear and no smaller/specialist skill clearly owns the task.
+- Do not use `accessibility-low-load-companion` when the user only asks for grammar/prose repair, transcript/dictation cleanup, or reading triage.
 - Do not expand a cleanup request into research, legal, medical, financial, workplace, or publication advice unless the user asks or the material clearly requires a verification gate.
 - Do not perform external lookup when it would not reduce a concrete risk or would require private material without consent.
 

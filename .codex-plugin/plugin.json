@@ -42,7 +42,7 @@
     "composerIcon": "./assets/icon.svg",
     "logo": "./assets/logo.svg",
     "defaultPrompt": [
-      "Use accessibility-low-load-companion to choose the smallest helpful accessibility step when dictation, reading load, spelling ambiguity, or rough notes overlap.",
+      "Use accessibility-low-load-companion only for mixed or unclear accessibility cases when no smaller/specialist skill clearly owns the task.",
       "Use accessibility-dictation-notes to turn this voice transcript or spoken fragment into cleaned notes, decisions, questions, ambiguities, and next actions.",
       "Use accessibility-reading-load-reducer to triage this dense material into read closely, skim, park, or skip with verification limits.",
       "Use accessibility-prose-repair to fix spelling, grammar, punctuation, sentence boundaries, and paragraph breaks without changing meaning."

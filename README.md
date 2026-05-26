@@ -2,7 +2,7 @@
 
 Version: 1.0.0
 
-Accessible Reading and Writing is a local plugin for reducing reading and writing load across everyday, work, learning, and research contexts. It handles rough notes, voice transcripts, dense documents, typo-heavy passages, dyslexic or dysorthographic writing friction, and mixed accessibility bottlenecks.
+Accessible Reading and Writing is a local plugin for reducing reading and writing load across everyday, work, learning, and research contexts. It handles rough notes, voice transcripts, dense documents, typo-heavy passages, dyslexic or dysorthographic writing friction, and mixed or unclear accessibility bottlenecks.
 
 The package prioritizes meaning preservation. It can clean, segment, simplify structure, and identify next actions, but it should not change the user's intent or turn uncertain material into confident claims.
 
@@ -54,7 +54,7 @@ Earlier local drafts used the package names `accessibility-plugin` and `low-load
 
 ## Skills
 
-- `accessibility-low-load-companion`: use when the bottleneck is mixed or unclear.
+- `accessibility-low-load-companion`: use when the bottleneck is mixed or unclear and no smaller/specialist skill clearly owns the task.
 - `accessibility-dictation-notes`: use for voice transcripts, spoken fragments, meeting notes, or rambling dictated ideas.
 - `accessibility-reading-load-reducer`: use for dense material, long documents, source packets, instructions, policies, or reading lists.
 - `accessibility-prose-repair`: use for spelling, grammar, punctuation, sentence boundary, paragraph, and typo repair while preserving meaning.
@@ -79,7 +79,7 @@ Use accessibility-reading-load-reducer. Tell me what to read closely, skim, park
 Use accessibility-prose-repair. Fix spelling and sentence boundaries without changing my meaning.
 ```
 
-Add "use compact output" when you want one source-basis line, one table or revised passage, ambiguity only when it could change meaning, and one next action.
+Compact output is the default for low-risk tasks: one source-basis line when relevant, one table or revised passage, ambiguity only when it could change meaning, privacy or verification limits when relevant, and one useful next action only when it reduces friction. Ask for expanded output when the task is high-stakes, evidence-sensitive, public-facing, workplace-sensitive, legal/medical/financial, publication-related, or source-sensitive.
 
 ## Verification and privacy limits
 

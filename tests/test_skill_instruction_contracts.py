@@ -44,8 +44,28 @@ def read_normalized(path: Path) -> str:
     return normalized_text(path.read_text(encoding="utf-8"))
 
 
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
 def skill_path(skill_name: str) -> Path:
     return SKILLS_ROOT / skill_name / "SKILL.md"
+
+
+def agent_path(skill_name: str) -> Path:
+    return SKILLS_ROOT / skill_name / "agents" / "openai.yaml"
+
+
+def markdown_section(text: str, heading: str) -> str:
+    pattern = re.compile(
+        rf"(?ms)^## {re.escape(heading)}\n(?P<section>.*?)(?=^## |\Z)"
+    )
+    match = pattern.search(text)
+    return "" if match is None else match.group("section")
+
+
+def output_format_text(skill_name: str) -> str:
+    return normalized_text(markdown_section(read_text(skill_path(skill_name)), "Output format"))
 
 
 def terms_are_present(text: str, terms: TermGroup) -> bool:
@@ -184,6 +204,18 @@ SHARED_DOCUMENT_CONTRACTS: tuple[Contract, ...] = (
         (
             ("private", "external tools", "without user consent"),
             ("confidential", "external tools", "consent"),
+        ),
+    ),
+    (
+        "external lookup consent choices are operational",
+        (
+            (
+                "work only from provided material",
+                "nonsensitive keywords",
+                "public identifiers",
+                "quoted/private/identifying details",
+                "explicit user consent",
+            ),
         ),
     ),
     (
@@ -362,6 +394,100 @@ class SkillInstructionContractTests(unittest.TestCase):
                     f"{skill_name} is missing skill-specific safety contract language",
                 )
 
+    def test_low_load_companion_routing_is_narrow(self) -> None:
+        text = "\n".join(
+            [
+                read_normalized(skill_path("accessibility-low-load-companion")),
+                read_normalized(agent_path("accessibility-low-load-companion")),
+            ]
+        )
+
+        required_fragments = (
+            "mixed or unclear",
+            "no smaller/specialist skill clearly owns the task",
+            "do not use this skill when the user only asks for grammar/prose repair",
+            "do not use this skill when the user only asks for transcript/dictation cleanup",
+            "do not use this skill when the user only asks for reading triage",
+        )
+
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, text)
+
+    def test_output_format_sections_default_to_compact(self) -> None:
+        for skill_name in MAIN_SKILLS:
+            with self.subTest(skill=skill_name):
+                section = output_format_text(skill_name)
+
+                self.assertIn("default compact output", section)
+                self.assertIn("expanded output", section)
+                self.assertLess(
+                    section.index("default compact output"),
+                    section.index("expanded output"),
+                )
+                for fragment in (
+                    "source basis",
+                    "uncertainty",
+                    "ambiguity",
+                    "privacy",
+                    "verification",
+                    "one useful next action only when it reduces friction",
+                ):
+                    self.assertIn(fragment, section)
+
+    def test_prose_repair_levels_keep_minimal_correction_default(self) -> None:
+        text = read_normalized(skill_path("accessibility-prose-repair"))
+
+        required_fragments = (
+            "level 1 / minimal correction",
+            "spelling, punctuation, grammar, and sentence boundaries only",
+            "no tone/style/claim-strength changes",
+            "level 2 / local clarity",
+            "level 2 / local clarity: only when the user asks",
+            "light sentence-local restructuring only when meaning is clear",
+            "level 3 / rewrite",
+            "only when explicitly requested",
+            "tone/audience/structure",
+            "default to level 1",
+        )
+
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, text)
+
+        forbidden_fragments = (
+            "requested output clearly requires",
+            "clearly requires one",
+        )
+
+        for fragment in forbidden_fragments:
+            with self.subTest(forbidden_fragment=fragment):
+                self.assertNotIn(fragment, text)
+
+    def test_dictation_instructions_include_verbatim_anchor_mode(self) -> None:
+        text = read_normalized(skill_path("accessibility-dictation-notes"))
+
+        required_fragments = (
+            "verbatim anchor mode",
+            "exact wording may matter",
+            "commitments",
+            "dates",
+            "names",
+            "refusals",
+            "permissions",
+            "privacy",
+            "obligations",
+            "emotionally loaded statements",
+            "workplace/meeting notes",
+            "legal/medical/financial-adjacent notes",
+            "source-sensitive material",
+            "short original fragments or redacted anchors",
+        )
+
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, text)
+
 
 class SharedDocumentContractTests(unittest.TestCase):
     def test_shared_docs_keep_source_privacy_and_uncertainty_limits(self) -> None:
@@ -369,6 +495,25 @@ class SharedDocumentContractTests(unittest.TestCase):
             [],
             missing_contract_names(shared_document_text(), SHARED_DOCUMENT_CONTRACTS),
         )
+
+    def test_scan_docs_do_not_use_wide_markdown_tables(self) -> None:
+        docs_to_check = (
+            DOCS_ROOT / "SKILL_INDEX.md",
+            DOCS_ROOT / "ROUTING_MATRIX.md",
+        )
+
+        for path in docs_to_check:
+            with self.subTest(path=path.name):
+                table_rows = [
+                    line
+                    for line in read_text(path).splitlines()
+                    if line.strip().startswith("|") and line.strip().endswith("|")
+                ]
+                self.assertEqual(
+                    [],
+                    table_rows,
+                    f"{path.name} should use heading/list structures instead of wide tables",
+                )
 
 
 if __name__ == "__main__":

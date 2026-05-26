@@ -1840,6 +1840,147 @@
       "notes": "A medical note with unchecked wording must not become a direct medication instruction through synonym changes."
     },
     {
+      "id": "prose_cancel_negation_015",
+      "skill": "accessibility-prose-repair",
+      "risk_type": [
+        "negation_loss",
+        "appointment_boundary"
+      ],
+      "input": "I do not want to cancel the appointment, just move it if possible.",
+      "gold_output": "# Prose repair\n\nI do not want to cancel the appointment, just move it if possible.\n\nReview note: Keep the do-not-cancel boundary and the \"if possible\" condition visible.",
+      "must_preserve_literals": [
+        "appointment",
+        "move it"
+      ],
+      "must_preserve_uncertainty": [
+        "if possible"
+      ],
+      "must_preserve_uncertainty_scope": [
+        "move it if possible"
+      ],
+      "must_preserve_negation_scope": [
+        "do not want to cancel the appointment"
+      ],
+      "must_not_introduce": [
+        "I want to cancel",
+        "appointment cancelled",
+        "cancel it"
+      ],
+      "required_ambiguity_fragments": [],
+      "forbidden_patterns": [
+        "\\bI want to cancel\\b",
+        "appointment cancelled",
+        "\\bcancel it\\b"
+      ],
+      "notes": "A grammar repair must not drop the negation and reverse an appointment boundary."
+    },
+    {
+      "id": "prose_tell_alex_uncertainty_016",
+      "skill": "accessibility-prose-repair",
+      "risk_type": [
+        "uncertainty_erasure",
+        "commitment_inflation"
+      ],
+      "input": "Maybe I should tell Alex, but I'm not sure.",
+      "gold_output": "# Prose repair\n\nMaybe I should tell Alex, but I'm not sure.\n\nReview note: Keep this tentative; do not turn it into an instruction or commitment to tell Alex.",
+      "must_preserve_literals": [
+        "Alex"
+      ],
+      "must_preserve_uncertainty": [
+        "Maybe",
+        "not sure"
+      ],
+      "must_preserve_uncertainty_scope": [
+        "Maybe I should tell Alex",
+        "I'm not sure"
+      ],
+      "must_not_introduce": [
+        "I will tell Alex",
+        "must tell Alex",
+        "Alex must be told"
+      ],
+      "required_ambiguity_fragments": [],
+      "forbidden_patterns": [
+        "\\bI will tell Alex\\b",
+        "must tell Alex",
+        "Alex must be told"
+      ],
+      "notes": "A cleanup must preserve that telling Alex is tentative and unresolved."
+    },
+    {
+      "id": "prose_report_due_claim_strength_017",
+      "skill": "accessibility-prose-repair",
+      "risk_type": [
+        "uncertainty_erasure",
+        "claim_strength_inflation",
+        "workplace_boundary"
+      ],
+      "input": "My manager said the report might be due Friday.",
+      "gold_output": "# Prose repair\n\nMy manager said the report might be due Friday.\n\nReview note: Keep \"might\" visible; this is not a confirmed Friday deadline.",
+      "must_preserve_literals": [
+        "manager",
+        "report",
+        "Friday"
+      ],
+      "must_preserve_uncertainty": [
+        "might"
+      ],
+      "must_preserve_uncertainty_scope": [
+        "report might be due Friday"
+      ],
+      "must_not_introduce": [
+        "report is due Friday",
+        "deadline is Friday",
+        "manager confirmed"
+      ],
+      "required_ambiguity_fragments": [],
+      "forbidden_patterns": [
+        "report is due Friday",
+        "deadline is Friday",
+        "manager confirmed"
+      ],
+      "notes": "A repair must not inflate a possible workplace deadline into a confirmed obligation."
+    },
+    {
+      "id": "prose_grammar_only_style_018",
+      "skill": "accessibility-prose-repair",
+      "risk_type": [
+        "grammar_only_scope",
+        "style_rewrite_drift",
+        "claim_strength_inflation"
+      ],
+      "input": "Grammar only: I maybe disagree with the plan, but I do not want a stronger tone.",
+      "gold_output": "# Prose repair\n\nGrammar only: I maybe disagree with the plan, but I do not want a stronger tone.\n\nReview note: This is a grammar-only pass. Do not rewrite the tone or strengthen the claim.",
+      "must_preserve_literals": [
+        "Grammar only",
+        "plan",
+        "stronger tone"
+      ],
+      "must_preserve_uncertainty": [
+        "maybe"
+      ],
+      "must_preserve_uncertainty_scope": [
+        "maybe disagree with the plan"
+      ],
+      "must_preserve_negation_scope": [
+        "do not want a stronger tone"
+      ],
+      "must_not_introduce": [
+        "strongly disagree",
+        "firmly oppose",
+        "escalate it now",
+        "unacceptable plan"
+      ],
+      "required_ambiguity_fragments": [],
+      "forbidden_patterns": [
+        "strongly disagree",
+        "firmly oppose",
+        "escalate it now",
+        "unacceptable plan"
+      ],
+      "notes": "A grammar-only request must not become a tone/style rewrite or stronger claim."
+    },
+    {
       "id": "dictation_privacy_team_update_011",
       "skill": "accessibility-dictation-notes",
       "risk_type": [
