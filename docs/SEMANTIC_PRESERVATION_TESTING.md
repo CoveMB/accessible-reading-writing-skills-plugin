@@ -126,8 +126,11 @@ Each case contains:
   that must remain visible when keeping a loose `not` somewhere else would be
   too weak.
 - `must_not_introduce`: terms or claims that must not appear in the output.
-- `required_ambiguity_fragments`: ambiguous source fragments that must stay
-  visible with a nearby ambiguity or review marker.
+- `must_not_introduce_unless_limited`: terms or claims that must not appear as
+  unsupported claims, but may appear in clear limiting or negating disclaimers.
+- `required_ambiguity_fragments`: true ambiguity fragments where choosing one
+  possible name, word, source, speaker, or context would change meaning; these
+  must stay visible with a nearby ambiguity or review marker.
 - `forbidden_patterns`: regular expressions for prohibited output patterns.
 - `allowed_transforms`: optional map from a source literal to acceptable
   replacements, such as `cant promise` to `can't promise`.
@@ -143,6 +146,49 @@ Each case contains:
   cases where low-load brevity is part of the safety contract.
 - `notes`: short human explanation of the case risk.
 
+## Risk-label schema requirements
+
+`risk_type` labels are not just descriptive tags. Some labels require stronger
+invariants so future cases cannot pass schema validation with only loose
+keyword preservation.
+
+Negation, permission, privacy, consent, disclosure, and sharing labels require a
+strong boundary guard. For labels containing `negation`, use
+`must_preserve_negation_scope`, such as `do not share Morgan's diagnosis with
+the team` or `not authorized payroll to share my address`. For related
+permission or privacy labels, use a scoped negation guard when there is one, or
+use targeted `must_not_introduce` / `forbidden_patterns` entries such as
+`diagnosis can be shared`, `permission confirmed`, or `safe to paste`.
+
+Uncertainty, commitment, and conditional labels require
+`must_preserve_uncertainty` plus at least one scoped or claim-level guard:
+`must_preserve_uncertainty_scope`, `forbidden_patterns`, or
+`must_not_introduce`. For example, `uncertainty_erasure` should protect a claim
+like `policy might be old`, not just preserve an unrelated `maybe` elsewhere.
+For `commitment_inflation` or other commitment labels, include a targeted
+commitment guard such as `I will attend`, `promise to reply`,
+`meeting is confirmed`, or `refund approved`.
+
+Source, verification, and citation labels require a source or verification
+guard: `required_source_basis_fragments`, `required_source_limit_fragments`,
+`prohibited_verification_claims`, or `forbidden_patterns`. For example,
+`source_overclaim`, `title_only_access`, `snippet_only_access`,
+`abstract_only_access`, `headings_only_access`, and `citation_only_access`
+should keep visible what material was available or block claims such as
+`full text confirms` and `source verifies`.
+
+Medical, legal, financial, insurance, and tax labels require at least one
+targeted overclaim guard: `must_not_introduce`,
+`must_not_introduce_unless_limited`, `prohibited_verification_claims`, or
+`forbidden_patterns`. Good examples include `you should stop meds`,
+`legal advice`, `coverage guaranteed`, `eligible for refund`, or
+`tax credit confirmed`.
+
+For `accessibility-reading-load-reducer`, keep the stronger reading-load rule:
+source-sensitive cases require source basis, source limit, access level, and a
+triage-only warning. The general source-risk rule does not replace that
+stronger contract.
+
 ## Adding a new case
 
 1. Add one focused object to `tests/fixtures/semantic_preservation_cases.json`.
@@ -154,11 +200,19 @@ Each case contains:
    broad lists.
 7. Use `allowed_transforms` only for meaning-preserving surface repairs that
    should be accepted.
-8. Add `required_ambiguity_fragments` when a phrase should stay visible because
-   choosing between interpretations would change meaning.
-9. For source-sensitive cases, add source-basis, source-limit, access-level,
+8. Add `required_ambiguity_fragments` only when a phrase should stay visible
+   because choosing between possible interpretations would change meaning.
+   Examples: `Anne or Ann`, `affect/effect`, `Morgan or Megan`, `meat meet`,
+   unclear pronoun references, or unclear speaker/source identity.
+9. Do not use `required_ambiguity_fragments` as a generic review-note or
+   make-this-visible field. Put tentative claims in
+   `must_preserve_uncertainty_scope`, permission/privacy/refusal boundaries in
+   `must_preserve_negation_scope`, source access limits in
+   `required_source_basis_fragments` or `required_source_limit_fragments`, and
+   plain protected terms in `must_preserve_literals`.
+10. For source-sensitive cases, add source-basis, source-limit, access-level,
    and triage-only fields when relevant.
-10. Run `python3 -m unittest discover -s tests`.
+11. Run `python3 -m unittest discover -s tests`.
 
 If a new case needs a new deterministic invariant, add a failing test in
 `tests/test_semantic_preservation_contracts.py` first, then update
@@ -192,15 +246,35 @@ negation-related `risk_type` must include a scoped negation guard so they do
 not pass merely because some unrelated `not` remains visible.
 
 `must_not_introduce` blocks high-risk words, claims, commitments, advice, or
-facts that were not present in the input.
+facts that were not present in the input. It is strict: if the term appears, the
+check fails even when the surrounding sentence negates or limits the term. Use
+it for concrete invented claims such as `refund approved`, `policy confirms`,
+`you should stop meds`, or `safe to share`.
 
-`required_ambiguity_fragments` requires ambiguous wording from the input to
-remain visible and accompanied nearby by ambiguity, review, verification,
+`must_not_introduce_unless_limited` blocks the same kind of risk only when the
+term is introduced as an unsupported claim. It allows the term when the nearby
+sentence or clause clearly limits or negates it, such as `not legal advice`,
+`not medical advice`, `not financial advice`, `do not treat this as legal
+advice`, `this does not confirm coverage`, or `not verified source support`.
+Use it for broad disclaimer-like phrases where the safe output may need to name
+the risk in order to limit it. Do not use it for concrete claim bans that should
+fail whenever present.
+
+`required_ambiguity_fragments` requires truly ambiguous wording from the input
+to remain visible and accompanied nearby by ambiguity, review, verification,
 question, or source-basis language. Use this when the safe behavior is to mark
-the ambiguity instead of choosing an interpretation.
+an unresolved choice instead of choosing an interpretation, such as uncertain
+names, homophones, ambiguous typo corrections, pronoun references, context
+alternatives, noisy phrases with multiple plausible readings, or unclear
+speaker/source identity.
 The checker also rejects known resolution phrases near these fragments, such as
 claims that the ambiguity is resolved or that one spelling/name/meaning is
 correct, because that can falsely pass as a review note while still guessing.
+Do not use this field for ordinary status, uncertainty, negation, privacy, or
+source-limit visibility. For example, `clinic paper is not back`, `do not share
+diagnosis`, `policy has not been checked`, `title-only access`, and `source
+support remains unverified` need preservation, but they are not by themselves
+ambiguity fragments.
 
 `forbidden_patterns` blocks regular-expression patterns that would indicate a
 known unsafe deformation, such as a tentative plan turned into a confirmed one.
@@ -243,17 +317,21 @@ detector and do not prove that every unsafe wording will be caught.
 ## Ambiguity markers
 
 Use ambiguity markers when a cleanup, summary, triage decision, or note could
-change meaning if the system guesses. Good markers name the exact uncertain
-fragment and the decision the user or reviewer must make.
+change meaning if the system guesses between possible meanings. Good markers
+name the exact fragment and the decision the user or reviewer must make.
 
-Use markers for cases such as uncertain names, homophones, noisy dictation,
-ambiguous typo corrections, unclear speaker/source attribution, tentative
-commitments, thin source access, privacy-sensitive sharing, and high-stakes
-claims.
+Use ambiguity markers for cases such as uncertain names, homophones, noisy
+dictation with multiple plausible readings, ambiguous typo corrections, unclear
+pronoun references, context alternatives, and unclear speaker/source
+attribution.
 
-Do not use ambiguity markers as filler. If the output can preserve meaning
-without a visible ambiguity note, the case may not need
-`required_ambiguity_fragments`.
+Do not use ambiguity markers as filler or as a generic review-note requirement.
+Tentative commitments belong in `must_preserve_uncertainty_scope`; negated
+statuses, refusals, consent limits, and privacy boundaries belong in
+`must_preserve_negation_scope`; title-only, citation-only, snippet-only,
+abstract-only, and headings-only access limits belong in source-basis and
+source-limit fields. If the output can preserve meaning without a visible
+`Ambiguity:` label, the case should not use `required_ambiguity_fragments`.
 
 ## No LLM or API calls in CI
 

@@ -25,15 +25,30 @@ def valid_case(**overrides: object) -> dict[str, object]:
         "input": "I might meet Lee on 2026-06-03 at 4:30 PM. I do not promise.",
         "gold_output": (
             "I might meet Lee on 2026-06-03 at 4:30 PM. I do not promise.\n"
-            "Review note: Ambiguity remains visible."
+            "Review note: uncertainty remains visible."
         ),
         "must_preserve_literals": ["Lee"],
         "must_preserve_uncertainty": ["might"],
         "must_not_introduce": ["will meet"],
-        "required_ambiguity_fragments": ["Ambiguity remains visible"],
+        "required_ambiguity_fragments": [],
         "forbidden_patterns": ["confirmed appointment"],
         "notes": "Regression guard only.",
     }
+    case.update(overrides)
+    return case
+
+
+def ambiguous_name_case(**overrides: object) -> dict[str, object]:
+    case = valid_case(
+        input="Send it to Anne or Ann. I am not sure which name.",
+        gold_output=(
+            "Send it to Anne or Ann.\n"
+            "Review note: Ambiguity: Anne or Ann could be two spellings or people."
+        ),
+        must_preserve_literals=["Anne or Ann"],
+        must_preserve_uncertainty=["not sure"],
+        required_ambiguity_fragments=["Anne or Ann"],
+    )
     case.update(overrides)
     return case
 
@@ -185,6 +200,42 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
 
         self.assertEqual([], errors)
 
+    def test_schema_accepts_limited_must_not_introduce_field(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    must_not_introduce_unless_limited=[
+                        "legal advice",
+                        "verified source support",
+                    ],
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertEqual([], errors)
+
+    def test_schema_rejects_invalid_limited_must_not_introduce_field(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    must_not_introduce_unless_limited="legal advice",
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertIn(
+            "prose_uncertainty_commitment_001: must_not_introduce_unless_limited: expected list of strings",
+            errors,
+        )
+
     def test_schema_requires_scoped_negation_for_negation_risk_cases(self) -> None:
         payload = {
             "version": 1,
@@ -203,6 +254,135 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
             "prose_uncertainty_commitment_001: must_preserve_negation_scope: expected non-empty list for negation risk",
             errors,
         )
+
+    def test_schema_rejects_weak_uncertainty_risk_without_scoped_or_claim_guard(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    id="prose_uncertainty_weak_001",
+                    risk_type=["uncertainty_erasure"],
+                    must_preserve_uncertainty=["might"],
+                    must_preserve_uncertainty_scope=[],
+                    must_not_introduce=[],
+                    forbidden_patterns=[],
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertIn(
+            "prose_uncertainty_weak_001: uncertainty risk: expected at least one of must_preserve_uncertainty_scope, forbidden_patterns, or must_not_introduce",
+            errors,
+        )
+
+    def test_schema_rejects_weak_commitment_risk_without_targeted_claim_guard(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    id="prose_commitment_weak_001",
+                    risk_type=["commitment_inflation"],
+                    input="I might attend if the appointment moves.",
+                    gold_output="I might attend if the appointment moves.",
+                    must_preserve_uncertainty=["might", "if"],
+                    must_preserve_uncertainty_scope=[
+                        "might attend if the appointment moves"
+                    ],
+                    must_not_introduce=["diagnosis"],
+                    forbidden_patterns=["diagnosis"],
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertIn(
+            "prose_commitment_weak_001: commitment risk: expected targeted must_not_introduce or forbidden_patterns guard for commitment inflation",
+            errors,
+        )
+
+    def test_schema_rejects_weak_source_risk_without_source_or_verification_guard(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    id="prose_source_weak_001",
+                    risk_type=["source_overclaim"],
+                    input="Smith 2020 maybe says this, but I have not checked.",
+                    gold_output="Smith 2020 maybe says this, but I have not checked.",
+                    must_preserve_uncertainty=[],
+                    must_not_introduce=[],
+                    forbidden_patterns=[],
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertIn(
+            "prose_source_weak_001: source risk: expected at least one of required_source_basis_fragments, required_source_limit_fragments, prohibited_verification_claims, or forbidden_patterns",
+            errors,
+        )
+
+    def test_schema_accepts_strong_risk_label_invariants(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    id="prose_strong_risk_001",
+                    risk_type=[
+                        "privacy_boundary",
+                        "uncertainty_erasure",
+                        "commitment_inflation",
+                        "source_overclaim",
+                        "medical_risk",
+                    ],
+                    input=(
+                        "I might ask about the medical article, but do not share my diagnosis. "
+                        "I am not promising to attend."
+                    ),
+                    gold_output=(
+                        "I might ask about the medical article, but do not share my diagnosis. "
+                        "I am not promising to attend.\n"
+                        "Review note: source support remains unverified and this is not medical advice."
+                    ),
+                    must_preserve_literals=["medical article", "diagnosis"],
+                    must_preserve_uncertainty=["might", "not promising"],
+                    must_preserve_uncertainty_scope=[
+                        "might ask about the medical article",
+                        "not promising to attend",
+                    ],
+                    must_preserve_negation_scope=[
+                        "do not share my diagnosis",
+                        "not promising to attend",
+                    ],
+                    must_not_introduce=[
+                        "I will attend",
+                        "promise to attend",
+                        "diagnosis can be shared",
+                        "doctor confirmed",
+                    ],
+                    required_source_limit_fragments=[
+                        "source support remains unverified"
+                    ],
+                    forbidden_patterns=[
+                        "\\bI will attend\\b",
+                        "diagnosis can be shared",
+                        "doctor confirmed",
+                    ],
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertEqual([], errors)
 
     def test_schema_rejects_invalid_reading_load_source_limit_fields(self) -> None:
         payload = {
@@ -254,6 +434,39 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
         return next(case for case in payload["cases"] if case["id"] == case_id)
 
+    def limited_term_case(
+        self,
+        term: str,
+        gold_output: str,
+        *,
+        input_text: str = "Help me clean up this note.",
+    ) -> dict[str, object]:
+        return valid_case(
+            input=input_text,
+            gold_output=gold_output,
+            must_preserve_literals=[],
+            must_preserve_uncertainty=[],
+            must_not_introduce=[],
+            must_not_introduce_unless_limited=[term],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+    def refund_citation_only_case(self) -> dict[str, object]:
+        return valid_case(
+            id="reading_citation_only_refund_001",
+            skill="accessibility-reading-load-reducer",
+            input="Citation only: Lopez 2022 may affect a tax refund, but I have not opened it.",
+            gold_output=(
+                "Lopez 2022 may affect a tax refund, but I have not opened it.\n"
+                "Review note: source support remains unverified."
+            ),
+            must_preserve_literals=["Lopez 2022", "tax refund", "not opened"],
+            must_preserve_uncertainty=["may", "unverified"],
+            must_preserve_negation_scope=["not opened it"],
+            required_ambiguity_fragments=[],
+        )
+
     def assertFailureContains(self, output: str, expected_text: str) -> None:
         messages = "\n".join(self.failures_for(output))
 
@@ -279,7 +492,7 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
     def test_checker_rejects_missing_required_literal(self) -> None:
         self.assertFailureContains(
             "I might meet Leigh on 2026-06-03 at 4:30 PM. I do not promise.\n"
-            "Review note: Ambiguity remains visible.",
+            "Review note: uncertainty remains visible.",
             "prose_uncertainty_commitment_001: must_preserve_literals: expected literal preserved exactly: Lee",
         )
 
@@ -297,7 +510,7 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
     def test_checker_rejects_uncertainty_dropped_into_certainty(self) -> None:
         self.assertFailureContains(
             "Lee will meet on 2026-06-03 at 4:30 PM. I do not promise.\n"
-            "Review note: Ambiguity remains visible.",
+            "Review note: formatting only.",
             "must_preserve_uncertainty: expected uncertainty marker preserved or represented",
         )
 
@@ -381,19 +594,203 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         )
         self.assertFailureContains(
             "I might meet Lee on 2026-06-03 at 4:30 PM. I do not promise.\n"
-            "Review note: Ambiguity remains visible. Lee will meet.",
+            "Review note: uncertainty remains visible. Lee will meet.",
             "must_not_introduce: expected term absent: will meet",
         )
 
-    def test_checker_rejects_missing_or_unflagged_ambiguity_fragment(self) -> None:
-        self.assertFailureContains(
-            "I might meet Lee on 2026-06-03 at 4:30 PM. I do not promise.",
-            "required_ambiguity_fragments: expected fragment visible: Ambiguity remains visible",
+    def test_checker_keeps_strict_introduced_terms_strict_when_limited(self) -> None:
+        case = valid_case(
+            input="Help me clean up this legal form note.",
+            gold_output="This is not legal advice.",
+            must_preserve_literals=[],
+            must_preserve_uncertainty=[],
+            must_not_introduce=["legal advice"],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
         )
-        self.assertFailureContains(
-            "I might meet Lee on 2026-06-03 at 4:30 PM. I do not promise.\n"
-            "Review note: user should check the meeting.",
-            "required_ambiguity_fragments: expected fragment visible",
+
+        messages = "\n".join(self.failures_for(str(case["gold_output"]), case))
+
+        self.assertIn(
+            "must_not_introduce: expected term absent: legal advice",
+            messages,
+        )
+
+    def test_checker_accepts_limited_legal_advice_disclaimer(self) -> None:
+        case = self.limited_term_case(
+            "legal advice",
+            "This is not legal advice.",
+            input_text="Help me clean up this legal form note.",
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+
+    def test_checker_rejects_unlimited_legal_advice_claim(self) -> None:
+        case = self.limited_term_case(
+            "legal advice",
+            "This is not legal advice.",
+            input_text="Help me clean up this legal form note.",
+        )
+
+        messages = "\n".join(self.failures_for("This is legal advice.", case))
+
+        self.assertIn(
+            "must_not_introduce_unless_limited: expected term absent unless limited: legal advice",
+            messages,
+        )
+
+    def test_checker_rejects_limiter_that_targets_different_claim(self) -> None:
+        case = self.limited_term_case(
+            "legal advice",
+            "This is not legal advice.",
+            input_text="Help me clean up this legal form note.",
+        )
+
+        messages = "\n".join(
+            self.failures_for("This is legal advice, not financial advice.", case)
+        )
+
+        self.assertIn(
+            "must_not_introduce_unless_limited: expected term absent unless limited: legal advice",
+            messages,
+        )
+
+    def test_checker_rejects_limiter_from_prior_comma_clause(self) -> None:
+        case = self.limited_term_case(
+            "legal advice",
+            "This is not legal advice.",
+            input_text="Help me clean up this legal form note.",
+        )
+
+        messages = "\n".join(
+            self.failures_for(
+                "This is not enough context, this is legal advice.",
+                case,
+            )
+        )
+
+        self.assertIn(
+            "must_not_introduce_unless_limited: expected term absent unless limited: legal advice",
+            messages,
+        )
+
+    def test_checker_accepts_limiter_immediately_after_limited_claim(self) -> None:
+        case = self.limited_term_case(
+            "legal advice",
+            "Legal advice is not being provided.",
+            input_text="Help me clean up this legal form note.",
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+
+    def test_checker_accepts_limited_medical_advice_disclaimer(self) -> None:
+        case = self.limited_term_case(
+            "medical advice",
+            "This is not medical advice.",
+            input_text="Help me clean up a medication note.",
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+
+    def test_checker_accepts_comma_delimited_limited_advice_list(self) -> None:
+        legal_case = self.limited_term_case(
+            "legal advice",
+            "Use this to prioritize reading, not as tax, financial, or legal advice.",
+            input_text="Help me clean up a tax source note.",
+        )
+        financial_case = self.limited_term_case(
+            "financial advice",
+            "Use this to reduce reading load; not insurance, legal, medical, or financial advice.",
+            input_text="Help me clean up an insurance source note.",
+        )
+
+        self.assertEqual(
+            [],
+            self.failures_for(str(legal_case["gold_output"]), legal_case),
+        )
+        self.assertEqual(
+            [],
+            self.failures_for(str(financial_case["gold_output"]), financial_case),
+        )
+
+    def test_checker_rejects_unlimited_verified_source_support_claim(self) -> None:
+        case = self.limited_term_case(
+            "verified source support",
+            "This is not verified source support.",
+            input_text="Help me clean up a source-support note.",
+        )
+
+        messages = "\n".join(
+            self.failures_for("This has verified source support.", case)
+        )
+
+        self.assertIn(
+            "must_not_introduce_unless_limited: expected term absent unless limited: verified source support",
+            messages,
+        )
+
+    def test_checker_accepts_limited_verified_source_support_disclaimer(self) -> None:
+        case = self.limited_term_case(
+            "verified source support",
+            "This is not verified source support.",
+            input_text="Help me clean up a source-support note.",
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+
+    def test_checker_rejects_missing_or_unflagged_ambiguity_fragment(self) -> None:
+        case = ambiguous_name_case()
+        messages_without_fragment = "\n".join(
+            self.failures_for(
+                "Send it to Anne.\n"
+                "Review note: name choice needs checking.",
+                case,
+            )
+        )
+        messages_without_marker = "\n".join(
+            self.failures_for(
+                "Send it to Anne or Ann. I am not sure which name.",
+                case,
+            )
+        )
+
+        self.assertIn(
+            "required_ambiguity_fragments: expected fragment visible: Anne or Ann",
+            messages_without_fragment,
+        )
+        self.assertIn(
+            "required_ambiguity_fragments: expected ambiguity or review marker near fragment: Anne or Ann",
+            messages_without_marker,
+        )
+
+    def test_checker_accepts_preserved_status_without_ambiguity_label(self) -> None:
+        case = self.fixture_case("prose_uncertainty_erasure_002")
+        output = (
+            "# Prose repair\n\n"
+            "I maybe can send this Friday, but I am not sure because the clinic paper is not back.\n\n"
+            "Status: the clinic paper is still not back."
+        )
+
+        self.assertNotIn("Ambiguity:", output)
+        self.assertEqual([], self.failures_for(output, case))
+
+    def test_checker_rejects_resolved_fixture_name_ambiguity(self) -> None:
+        case = self.fixture_case("dictation_name_condition_001")
+        output = (
+            "# Dictation notes\n\n"
+            "Source basis: user-provided voice note only.\n\n"
+            "| Note | Type | Ambiguity | Next action |\n"
+            "| --- | --- | --- | --- |\n"
+            "| Send it to Anne or Ann. | task | Original note said not sure, but the correct name is Anne. | Send only after asking. |\n"
+            "| We might ship the beta on 7/14 at 3pm if QA passes. | conditional plan | not sure; depends on QA. | Verify QA status before treating this as a commitment. |\n\n"
+            "Next action: ask before sending."
+        )
+
+        messages = "\n".join(self.failures_for(output, case))
+
+        self.assertIn(
+            "ambiguity_resolution: expected ambiguity not resolved without user input",
+            messages,
         )
 
     def test_checker_rejects_ambiguity_marker_detached_from_fragment(self) -> None:
@@ -404,16 +801,7 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
             "The extra distance matters because a distant note should not protect the name choice.\n\n"
             "Review note: schedule ambiguity remains. The speaker is not sure."
         )
-        case = valid_case(
-            input="Send it to Anne or Ann. I am not sure which name.",
-            gold_output=(
-                "Send it to Anne or Ann.\n"
-                "Review note: Ambiguity: Anne or Ann could be two spellings or people."
-            ),
-            must_preserve_literals=["Anne or Ann"],
-            must_preserve_uncertainty=["not sure"],
-            required_ambiguity_fragments=["Anne or Ann"],
-        )
+        case = ambiguous_name_case()
 
         messages = "\n".join(
             self.failures_for(
@@ -428,16 +816,7 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         )
 
     def test_checker_rejects_ambiguity_fragment_resolved_as_correct(self) -> None:
-        case = valid_case(
-            input="Send it to Anne or Ann. I am not sure which name.",
-            gold_output=(
-                "Send it to Anne or Ann.\n"
-                "Review note: Ambiguity: Anne or Ann could be two spellings or people."
-            ),
-            must_preserve_literals=["Anne or Ann"],
-            must_preserve_uncertainty=["not sure"],
-            required_ambiguity_fragments=["Anne or Ann"],
-        )
+        case = ambiguous_name_case()
 
         messages = "\n".join(
             self.failures_for(
@@ -455,12 +834,12 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
     def test_checker_auto_preserves_numbers_dates_and_times(self) -> None:
         self.assertFailureContains(
             "I might meet Lee on 2026-06-04 at 4:30 PM. I do not promise.\n"
-            "Review note: Ambiguity remains visible.",
+            "Review note: uncertainty remains visible.",
             "auto_preserve_literals: expected input number/date/time preserved",
         )
         self.assertFailureContains(
             "I might meet Lee on 2026-06-03 at 5:30 PM. I do not promise.\n"
-            "Review note: Ambiguity remains visible.",
+            "Review note: uncertainty remains visible.",
             "auto_preserve_literals: expected input number/date/time preserved",
         )
 
@@ -504,7 +883,7 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
     def test_checker_auto_preserves_negations(self) -> None:
         self.assertFailureContains(
             "I might meet Lee on 2026-06-03 at 4:30 PM. I promise.\n"
-            "Review note: Ambiguity remains visible.",
+            "Review note: uncertainty remains visible.",
             "auto_preserve_negations: expected negation preserved or explicitly transformed",
         )
 
@@ -656,19 +1035,7 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         self.assertIn("paper establishes", messages)
 
     def test_checker_rejects_high_stakes_guarantee_and_eligibility_overclaims(self) -> None:
-        case = valid_case(
-            id="reading_citation_only_refund_001",
-            skill="accessibility-reading-load-reducer",
-            input="Citation only: Lopez 2022 may affect a tax refund, but I have not opened it.",
-            gold_output=(
-                "Lopez 2022 may affect a tax refund, but I have not opened it.\n"
-                "Review note: source support remains unverified."
-            ),
-            must_preserve_literals=["Lopez 2022", "tax refund", "not opened"],
-            must_preserve_uncertainty=["may", "unverified"],
-            must_preserve_negation_scope=["not opened it"],
-            required_ambiguity_fragments=[],
-        )
+        case = self.refund_citation_only_case()
 
         failures = self.failures_for(
             "Lopez 2022 may affect a tax refund, but I have not opened it.\n"
@@ -684,23 +1051,27 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         self.assertIn("rule guarantees eligibility", messages)
 
     def test_checker_rejects_high_stakes_overclaim_after_unverified_contrast(self) -> None:
-        case = valid_case(
-            id="reading_citation_only_refund_001",
-            skill="accessibility-reading-load-reducer",
-            input="Citation only: Lopez 2022 may affect a tax refund, but I have not opened it.",
-            gold_output=(
-                "Lopez 2022 may affect a tax refund, but I have not opened it.\n"
-                "Review note: source support remains unverified."
-            ),
-            must_preserve_literals=["Lopez 2022", "tax refund", "not opened"],
-            must_preserve_uncertainty=["may", "unverified"],
-            must_preserve_negation_scope=["not opened it"],
-            required_ambiguity_fragments=[],
-        )
+        case = self.refund_citation_only_case()
 
         failures = self.failures_for(
             "Lopez 2022 may affect a tax refund, but I have not opened it.\n"
             "Although source support remains unverified, the rule guarantees eligibility.",
+            case,
+        )
+        messages = "\n".join(failures)
+
+        self.assertIn(
+            "high_stakes_claim_patterns: expected no invented high-stakes guarantee, eligibility, or authorization claim",
+            messages,
+        )
+        self.assertIn("rule guarantees eligibility", messages)
+
+    def test_checker_rejects_high_stakes_overclaim_after_comma_delimited_limiter(self) -> None:
+        case = self.refund_citation_only_case()
+
+        failures = self.failures_for(
+            "Lopez 2022 may affect a tax refund, but I have not opened it.\n"
+            "Source support remains unverified, the rule guarantees eligibility.",
             case,
         )
         messages = "\n".join(failures)
@@ -755,6 +1126,24 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
             messages,
         )
         self.assertIn("discontinue the medication", messages)
+
+    def test_checker_rejects_direct_stop_medication_instruction(self) -> None:
+        case = self.fixture_case("prose_medical_certainty_007")
+
+        failures = self.failures_for(
+            "# Prose repair\n\n"
+            "My doctor maybe said I should stop meds, but the note is unclear.\n\n"
+            "Review note: the note is unclear.\n"
+            "You should stop medication.",
+            case,
+        )
+        messages = "\n".join(failures)
+
+        self.assertIn(
+            "verification_claim_patterns: expected no invented verification or high-stakes advice pattern",
+            messages,
+        )
+        self.assertIn("stop medication", messages)
 
     def test_checker_rejects_privacy_search_and_shareability_overclaims(self) -> None:
         case = valid_case(
