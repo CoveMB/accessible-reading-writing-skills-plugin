@@ -49,7 +49,7 @@ If only titles, snippets, metadata, or partial excerpts are available, mark tria
 
 ## Compact output
 
-Use compact output when the user asks for low reading load, time-boxed triage, or a fast skim/read/skip decision. Compact output should use short chunks, stable labels, one triage table, one uncertainty note only when needed, and the first reading action.
+Use compact output by default for low-risk reading triage, time-boxed triage, or a fast skim/read/skip decision. Compact output should use short chunks, stable labels, one source-basis line, one triage table, uncertainty and ambiguity only if access or meaning could change the decision, privacy or verification limits when relevant, and one useful next action only when it reduces friction.
 
 ## Files/folders it may read
 
@@ -117,6 +117,25 @@ Suggest a short sequence that starts with the highest-return reading and names w
 
 ## Output format
 
+Default compact output:
+
+```markdown
+# Reading triage
+
+Source basis: [one line]
+How to use this result: TRIAGE ONLY - Use this only to prioritize reading; do not treat it as verification or final advice.
+
+| Item | Access level | Decision | Why | First extraction target | Skip/park risk |
+
+Uncertainty or ambiguity: [only if access is thin or meaning is unclear]
+Privacy or verification limit: [only when relevant]
+Next action: [one useful next action only when it reduces friction]
+```
+
+Expanded output:
+
+Use expanded output when the task is high-stakes, evidence-sensitive, public-facing, workplace-sensitive, legal/medical/financial, publication-related, source-sensitive, or when the user asks for a fuller reading audit.
+
 ```markdown
 # Reading load reducer
 
@@ -140,19 +159,4 @@ Suggest a short sequence that starts with the highest-return reading and names w
 ## What remains uncertain
 
 ## User verification needed
-```
-
-Compact output:
-
-```markdown
-# Reading triage
-
-Source basis: [one line]
-How to use this result: TRIAGE ONLY - Use this only to prioritize reading; do not treat it as verification or final advice.
-
-| Item | Access level | Decision | Why | First extraction target | Skip/park risk |
-
-Uncertainty: [only if access is thin or meaning is unclear]
-
-Next action: [first reading action]
 ```

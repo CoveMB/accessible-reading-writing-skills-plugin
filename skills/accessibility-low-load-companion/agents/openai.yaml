@@ -1,7 +1,7 @@
 interface:
   display_name: "Accessibility Companion"
-  short_description: "Route mixed or unclear accessibility bottlenecks for dyslexic, dysorthographic, dictation-heavy, reading-fatigued, or overwhelmed users when rough notes, voice material, dense documents, spelling ambiguity, or next-step friction overlap."
-  default_prompt: "Use accessibility-low-load-companion to choose the smallest helpful accessibility step when dictation, reading load, spelling ambiguity, rough notes, or next-step friction overlap."
+  short_description: "Route mixed or unclear accessibility bottlenecks only when rough notes, voice material, dense documents, spelling ambiguity, or next-step friction overlap and no smaller/specialist skill clearly owns the task."
+  default_prompt: "Use accessibility-low-load-companion only for mixed or unclear accessibility cases when no smaller/specialist skill clearly owns the task; do not use this skill when the user only asks for grammar/prose repair, transcript/dictation cleanup, or reading triage."
 policy:
   allow_implicit_invocation: true
   task_type: "accessibility-skill"

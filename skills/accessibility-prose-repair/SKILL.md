@@ -37,7 +37,7 @@ Use this instead of `accessibility-dictation-notes` when the input is already pr
 ## Inputs expected
 
 - Existing prose passage, message, email, note, form response, draft paragraph, proposal section, or chapter excerpt.
-- Desired repair level: minimal correction, local sentence repair, paragraph breaks, or issue-list cleanup.
+- Desired repair level: Level 1 / minimal correction, Level 2 / local clarity, or Level 3 / rewrite.
 - Terms, names, quotes, technical phrases, numbers, obligations, and claims that must not change.
 - Optional source basis if claims or citations should be flagged.
 
@@ -49,7 +49,7 @@ Treat spelling and grammar cleanup as surface repair. If a correction could chan
 
 ## Compact output
 
-Use compact output when the user asks for low reading load, minimal correction, or fast prose repair. Compact output should provide the revised passage, one source-basis line when relevant, changed phrases only when review is needed, and one evidence or ambiguity note only when relevant.
+Use compact output by default for low-risk prose repair, minimal correction, or fast prose cleanup. Compact output should provide the revised passage, one source-basis line when relevant, uncertainty and ambiguity only if meaning could change, privacy or verification limits when relevant, changed phrases only when review is needed, and one useful next action only when it reduces friction.
 
 ## Files/folders it may read
 
@@ -75,12 +75,11 @@ Use compact output when the user asks for low reading load, minimal correction, 
 
 ### 1. Select repair level
 
-Default to minimal correction unless the user asks for a stronger pass or the requested output clearly requires one:
+Default to Level 1 unless the user asks for stronger editing:
 
-- minimal correction: spelling, punctuation, grammar, and sentence boundaries only
-- local sentence repair: minimal correction plus light reordering inside sentences
-- paragraph repair: add paragraph breaks and transitions without new claims
-- issue-list cleanup: repair prose and include a concise issue list without broader style polish
+- Level 1 / minimal correction: spelling, punctuation, grammar, and sentence boundaries only; no tone/style/claim-strength changes.
+- Level 2 / local clarity: only when the user asks for local clarity, clearer sentence flow, or light restructuring. It adds light sentence-local restructuring only when meaning is clear.
+- Level 3 / rewrite: only when explicitly requested. It may adapt tone/audience/structure, but it must still preserve facts, uncertainty, limits, and source boundaries.
 
 ### 2. Protect meaning
 
@@ -115,6 +114,24 @@ For source, legal, medical, financial, or publication verification, state the ne
 
 ## Output format
 
+Default compact output:
+
+```markdown
+# Prose repair
+
+Source basis: [one line when relevant]
+Repair level: Level 1 / minimal correction unless the user requested more
+
+[Revised passage]
+
+Review note: [uncertainty, ambiguity, privacy, or verification limit only if it could change meaning or risk]
+Next action: [one useful next action only when it reduces friction]
+```
+
+Expanded output:
+
+Use expanded output when the task is high-stakes, evidence-sensitive, public-facing, workplace-sensitive, legal/medical/financial, publication-related, source-sensitive, or when the user asks for a fuller edit log.
+
 ```markdown
 # Prose repair
 
@@ -141,16 +158,4 @@ For source, legal, medical, financial, or publication verification, state the ne
 ## What remains uncertain
 
 ## User verification needed
-```
-
-Compact output:
-
-```markdown
-# Prose repair
-
-Source basis: [one line if relevant]
-
-[Revised passage]
-
-Review note: [only if a correction could change meaning]
 ```

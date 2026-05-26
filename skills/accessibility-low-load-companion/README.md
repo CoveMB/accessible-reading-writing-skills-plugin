@@ -1,11 +1,11 @@
 # accessibility-low-load-companion
 
-Use this skill when the user's accessibility bottleneck is mixed or unclear and no narrower accessibility skill clearly owns the first step.
+Use this skill when the user's accessibility bottleneck is mixed or unclear and no smaller/specialist skill clearly owns the first step.
 
 Examples:
 
 ```text
-Use accessibility-low-load-companion. I have rough notes, typos, and too much to read. Choose the smallest useful next step.
+Use accessibility-low-load-companion. I have rough notes, typos, and too much to read, and I am not sure which task comes first. Choose the smallest useful next step.
 ```
 
 ```text

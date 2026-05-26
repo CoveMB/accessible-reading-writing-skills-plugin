@@ -27,6 +27,14 @@ State the source access level before making factual or evidence-sensitive claims
 - Do not submit private passages, private source packets, sensitive material, or identifiable personal details to external tools without user consent.
 - If external lookup would require sensitive material, ask for consent or request a safer query form.
 
+## External lookup consent pattern
+
+When lookup may help, offer the user these choices:
+
+- Work only from provided material.
+- Search using nonsensitive keywords/public identifiers only.
+- Use quoted/private/identifying details externally only with explicit user consent.
+
 ## Output requirements
 
 For factual, high-stakes, research, workplace, external-sharing, legal, medical, financial, or publication-sensitive outputs, identify:

@@ -8,8 +8,8 @@ This file is the shared operating policy for skill READMEs. Individual READMEs s
 2. Follow the skill's `SKILL.md` procedure instead of working from memory.
 3. Keep visible facts, interpretation, uncertainty, and recommendation separate when the task is factual or decision-sensitive.
 4. Preserve the user's meaning. Mark ambiguity instead of guessing when a correction could change meaning.
-5. Use the smallest clear accessibility skill first; use `accessibility-low-load-companion` only for mixed or unclear bottlenecks.
-6. For compact output, use one source-basis line, one table or revised passage, ambiguity only when it could change meaning, and one next action.
+5. Use the smallest clear accessibility skill first; use `accessibility-low-load-companion` only for mixed or unclear bottlenecks when no smaller/specialist skill clearly owns the task.
+6. For compact output, use one source-basis line when relevant, one table or revised passage, ambiguity only when it could change meaning, privacy or verification limits when relevant, and one useful next action only when it reduces friction.
 7. Escalate from compact output before relying on the result for publication, external sharing, legal/medical/financial decisions, workplace obligations, citation verification, or research claims.
 
 ## Quality checks
