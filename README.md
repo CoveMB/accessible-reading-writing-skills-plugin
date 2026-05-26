@@ -93,6 +93,13 @@ Private notes, drafts, transcripts, and sensitive documents should not be sent t
 ./validate.sh
 ```
 
+The full package check also runs unittest discovery, including
+semantic-preservation regression tests for meaning-changing deformations such as
+lost uncertainty, dropped negation, changed numbers or dates, hidden privacy
+risk, and overstated source access. See
+[`docs/SEMANTIC_PRESERVATION_TESTING.md`](docs/SEMANTIC_PRESERVATION_TESTING.md)
+for how the fixtures and deterministic invariants work, and for their limits.
+
 ## Uninstall
 
 Remove `~/.codex/plugins/accessible-reading-writing-plugin`, then remove the `accessible-reading-writing-plugin` entry from `~/.agents/plugins/marketplace.json`.
