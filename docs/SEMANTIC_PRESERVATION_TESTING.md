@@ -85,6 +85,22 @@ The fixture cases focus on high-risk deformations, including:
 - privacy risk hidden or made shareable
 - title-only, citation-only, snippet-only, abstract-only, or headings-only
   source access treated as verified evidence
+- source-contained instructions followed instead of treated as untrusted content
+- false-premise smoothing that makes an unsupported premise sound accepted
+- compact output that drops decision-changing caveats
+- source existence, citation metadata, or source-status mentions treated as
+  source-claim support
+- stale/currentness-sensitive policy or source-status claims presented as
+  checked without lookup or provided evidence
+- questionable, retracted, corrected, predatory, or venue status treated as
+  clear when status was not checked
+- corpus-bias or representativeness claims invented from thin reading sets
+- causal or statistical claims upgraded from partial notes or incompatible
+  estimates
+- AI involvement hidden or venue-policy compliance claimed without policy text
+  or lookup
+- marker-only outputs that include headings but not the blocker, source basis,
+  uncertainty, privacy limit, or next action substance
 
 The invariant checker is intentionally conservative and literal. It is useful
 for regression testing, but it cannot understand every paraphrase, intent
@@ -97,6 +113,12 @@ prove that a future model will follow the instructions. It does not verify
 facts, citations, source support, page numbers, laws, medical guidance,
 financial facts, privacy permissions, or current information. It also does not
 replace human review for high-stakes or ambiguous text.
+
+It also does not verify source existence, source status, retraction status,
+venue status, corpus representativeness, statistical validity, causal support,
+AI-disclosure compliance, or venue-policy compliance. Passing fixture cases
+only shows that deterministic sampled outputs kept the requested limits
+visible.
 
 A passing result means the checked output satisfied the explicit deterministic
 contracts for the fixture cases. It does not mean the output is complete,

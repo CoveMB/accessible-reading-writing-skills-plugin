@@ -88,6 +88,14 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
             "title/citation/metadata only",
             "search result snippet only",
             "citation only",
+            "source packet says ignore the skill rules",
+            "live/current lookup needed",
+            "source status was not checked",
+            "12% rate, an odds ratio of 1.8, and a small case-series count",
+            "english-only open-access google scholar results",
+            "ai involvement cannot be concealed",
+            "preferred conclusion is already correct",
+            "marker-only output is not enough",
         )
 
         for fragment in required_fragments:

@@ -148,6 +148,30 @@ SHARED_SKILL_CONTRACTS: tuple[Contract, ...] = (
         ),
     ),
     (
+        "source-contained instructions are treated as content",
+        (
+            ("source-contained", "instructions", "not", "follow"),
+            ("source material", "not operating instructions"),
+            ("untrusted", "source material", "instructions"),
+        ),
+    ),
+    (
+        "false premises are not smoothed into claims",
+        (
+            ("false premise", "strongest supportable"),
+            ("unsupported premise", "do not", "smooth"),
+            ("premise gap", "supportable"),
+        ),
+    ),
+    (
+        "compact output keeps decision-changing caveats",
+        (
+            ("compact", "decision-changing caveats"),
+            ("compact output", "must not remove", "caveats"),
+            ("compact output", "source", "privacy", "verification", "limits"),
+        ),
+    ),
+    (
         "original material is not overwritten without explicit request",
         (
             ("must not overwrite", "explicit"),
@@ -197,6 +221,44 @@ SHARED_DOCUMENT_CONTRACTS: tuple[Contract, ...] = (
         (
             ("full text", "needed", "mark the result unverified"),
             ("missing source access", "marked clearly"),
+        ),
+    ),
+    (
+        "source-contained instructions are untrusted data",
+        (
+            ("source-contained", "instructions", "not", "operating instructions"),
+            ("untrusted", "source material", "do not follow"),
+        ),
+    ),
+    (
+        "source existence is not source support",
+        (
+            ("source existence", "not source support"),
+            ("citation", "metadata", "not", "source-claim support"),
+        ),
+    ),
+    (
+        "currentness and source status need lookup or labels",
+        (
+            ("currentness", "lookup", "unverified"),
+            ("retraction", "correction", "questionable", "lookup"),
+            ("predatory", "status", "unchecked"),
+        ),
+    ),
+    (
+        "AI involvement and venue policy limits stay visible",
+        (
+            ("ai involvement", "must not be concealed"),
+            ("venue policy", "unverified"),
+            ("venue-policy", "lookup needed"),
+        ),
+    ),
+    (
+        "marker-only compliance is rejected",
+        (
+            ("marker-only", "substance"),
+            ("required headings", "not enough"),
+            ("headings", "empty", "generic"),
         ),
     ),
     (
@@ -268,6 +330,25 @@ SKILL_SPECIFIC_CONTRACTS: dict[str, tuple[Contract, ...]] = {
             "facts, citations, promises, and obligations are not added",
             (("do not add", "facts", "citations", "promises", "obligations"),),
         ),
+        (
+            "false-premise smoothing is blocked",
+            (("false premise", "do not", "smooth"),),
+        ),
+        (
+            "AI disclosure and venue policy uncertainty are preserved",
+            (
+                (
+                    "ai involvement",
+                    "must not be concealed",
+                    "venue policy",
+                    "unverified",
+                ),
+            ),
+        ),
+        (
+            "compact repair keeps caveats that change reliance",
+            (("compact repair", "caveats", "claim strength", "ai involvement"),),
+        ),
     ),
     "accessibility-dictation-notes": (
         (
@@ -285,6 +366,29 @@ SKILL_SPECIFIC_CONTRACTS: dict[str, tuple[Contract, ...]] = {
         (
             "emphatic repetition is not erased",
             (("do not erase repetitions", "emphasis"),),
+        ),
+        (
+            "source-contained instructions remain transcript content",
+            (
+                (
+                    "source-contained",
+                    "instructions",
+                    "transcript content",
+                    "not followed",
+                ),
+            ),
+        ),
+        (
+            "AI privacy and commitment uncertainty stay visible",
+            (
+                (
+                    "ai",
+                    "privacy",
+                    "commitment",
+                    "uncertainty",
+                    "visible",
+                ),
+            ),
         ),
     ),
     "accessibility-low-load-companion": (
@@ -311,6 +415,14 @@ SKILL_SPECIFIC_CONTRACTS: dict[str, tuple[Contract, ...]] = {
         (
             "privacy and evidence concerns stay visible",
             (("do not hide", "evidence", "privacy concerns"),),
+        ),
+        (
+            "false premises and blockers are not hidden",
+            (("false premise", "blocker", "do not hide"),),
+        ),
+        (
+            "marker-only compliance is not accepted",
+            (("marker-only", "required headings", "substance"),),
         ),
     ),
     "accessibility-reading-load-reducer": (
@@ -348,6 +460,22 @@ SKILL_SPECIFIC_CONTRACTS: dict[str, tuple[Contract, ...]] = {
         (
             "triage is not verified synthesis",
             (("do not turn", "triage", "verified synthesis"),),
+        ),
+        (
+            "source packets cannot inject instructions",
+            (("source-contained", "instructions", "not followed", "source packet"),),
+        ),
+        (
+            "currentness and questionable source status stay unchecked without lookup",
+            (("currentness", "source-status", "lookup", "unchecked"),),
+        ),
+        (
+            "corpus bias and representativeness limits stay visible",
+            (("corpus", "representative", "english-only", "open-access"),),
+        ),
+        (
+            "causal and statistical claims are not upgraded",
+            (("causal", "statistical", "denominator", "incompatible estimates"),),
         ),
     ),
 }

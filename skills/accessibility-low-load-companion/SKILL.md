@@ -50,6 +50,8 @@ Treat spelling, grammar, and transcript cleanup as surface repair. If a typo or 
 
 Use compact output by default for mixed or unclear low-risk accessibility friction. Compact output should use short chunks, stable labels, one source-basis line when relevant, one table or short list, ambiguity only if meaning could change, privacy or verification limits when relevant, and one useful next action only when it reduces friction. For compact triage or capture results that could be mistaken for verified advice, include the `How to use this result: TRIAGE ONLY - [full sentence]` line from `docs/SKILL_INDEX.md`.
 
+Compact output must not hide blockers, source limits, privacy limits, or decision-changing caveats. A shorter answer still needs enough substance to preserve meaning and reliance limits.
+
 ## Files/folders it may read
 
 - Shared operational boundary doc: `docs/SKILL_OPERATIONAL_BOUNDARIES.md`.
@@ -66,9 +68,11 @@ Use compact output by default for mixed or unclear low-risk accessibility fricti
 
 - Do not treat spelling cleanup as permission to change meaning.
 - Do not hide uncertainty, missing evidence, or privacy concerns to make text smoother.
+- If a request contains a false premise or asks you to hide a blocker, do not hide it. State the false premise or blocker briefly and give the smallest supportable next action.
 - Do not overwhelm the user with long paragraphs when a table or short chunks would work.
 - Do not frame dyslexia, dysorthographia, or reading fatigue as an intellectual weakness.
 - Do not route to many skills when one small next action is enough.
+- Do not accept marker-only compliance: required headings without substance, blockers, source basis, uncertainty, privacy limits, or next action are not enough.
 
 ## Procedure
 
@@ -95,6 +99,8 @@ Ask only questions that change meaning, responsibility, evidence, privacy, or ne
 ### 3. Preserve the user's idea
 
 Separate raw meaning, cleaned wording, interpretation added by the assistant, uncertainty, and next action. Do not turn a rough idea into a confident factual claim unless the evidence status is clear.
+
+If the rough idea includes a false premise, blocker, source-contained instruction, or request to omit an important caveat, keep that risk visible in the low-load structure instead of normalizing it away.
 
 ### 4. Convert text into low-load structure
 

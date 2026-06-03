@@ -51,6 +51,8 @@ Treat spelling and grammar cleanup as surface repair. If a correction could chan
 
 Use compact output by default for low-risk prose repair, minimal correction, or fast prose cleanup. Compact output should provide the revised passage, one source-basis line when relevant, uncertainty and ambiguity only if meaning could change, privacy or verification limits when relevant, changed phrases only when review is needed, and one useful next action only when it reduces friction.
 
+Compact repair must keep caveats that affect claim strength, consent, responsibility, obligations, AI involvement, source support, currentness, venue policy, publication or release status, and privacy. Shorter output must not make an uncertain or unsupported claim look settled.
+
 ## Files/folders it may read
 
 - Shared operational boundary doc: `docs/SKILL_OPERATIONAL_BOUNDARIES.md`.
@@ -69,6 +71,8 @@ Use compact output by default for low-risk prose repair, minimal correction, or 
 - Do not erase uncertainty, qualifiers, commitments, consent language, or evidence limits.
 - Do not silently "fix" names, terms, citations, quotes, numbers, dates, diagnoses, policy language, or technical language when uncertain.
 - Do not add facts, examples, citations, promises, obligations, or source claims.
+- If the user request contains a false premise, do not smooth it into better prose; preserve or flag the unsupported premise and provide the strongest supportable wording.
+- Do not conceal AI involvement. Venue policy is unverified unless the policy text is provided or a permitted lookup checks it.
 - Do not shame or foreground the user's spelling difficulty.
 
 ## Procedure
@@ -111,6 +115,8 @@ If the repaired prose reveals a concrete next-step risk, suggest one skill:
 - dense material needs triage before editing: `accessibility-reading-load-reducer`
 
 For source, legal, medical, financial, or publication verification, state the need for appropriate source access or expert review instead of pretending the edit verifies the content.
+
+For AI disclosure, authorship, source-support, currentness, causal, statistical, venue-policy, or method claims, preserve the visible uncertainty unless the user provides verification and explicitly asks for stronger wording. AI involvement must not be concealed, and venue policy remains unverified without policy text or lookup.
 
 ## Output format
 
