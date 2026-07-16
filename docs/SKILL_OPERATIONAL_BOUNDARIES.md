@@ -48,7 +48,7 @@ This file is the shared operating policy for skill READMEs. Individual READMEs s
 
 ## Agent policy metadata
 
-Each `agents/openai.yaml` policy block is generated from shared validator policy, not hand-maintained prose.
+Shared policy values are defined in `scripts/plugin_utils.py`. Each committed `agents/openai.yaml` policy block must match them; `scripts/validate_plugin.py` checks this but does not generate or rewrite the file.
 
 Allowed `external_lookup_allowed` values are `conditional`, `route-only`, and `none`.
 
