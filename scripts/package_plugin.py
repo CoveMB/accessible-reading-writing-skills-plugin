@@ -7,9 +7,11 @@ import subprocess
 import sys
 import zipfile
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from plugin_utils import (
+    copy_package_tree,
     package_files as included_package_files,
     plugin_version,
 )
@@ -32,10 +34,30 @@ def write_package(root: Path, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if temporary_output_path.exists():
         temporary_output_path.unlink()
-    with zipfile.ZipFile(temporary_output_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for path in package_output_files(root, output_path, temporary_output_path):
-            archive.write(path, root.name + "/" + str(path.relative_to(root)))
-    temporary_output_path.replace(output_path)
+    with TemporaryDirectory(prefix="accessible-reading-writing-package-") as temporary_directory:
+        staged_root = Path(temporary_directory) / root.name
+        copy_package_tree(root, staged_root)
+        if run_validation(staged_root) != 0:
+            raise RuntimeError("staged package validation failed")
+        try:
+            with zipfile.ZipFile(
+                temporary_output_path,
+                "w",
+                compression=zipfile.ZIP_DEFLATED,
+            ) as archive:
+                for path in package_output_files(
+                    staged_root,
+                    output_path,
+                    temporary_output_path,
+                ):
+                    archive.write(
+                        path,
+                        root.name + "/" + str(path.relative_to(staged_root)),
+                    )
+            temporary_output_path.replace(output_path)
+        finally:
+            if temporary_output_path.exists():
+                temporary_output_path.unlink()
 
 
 def default_output_path(root: Path) -> Path:
@@ -75,7 +97,11 @@ def main() -> int:
     validation_status = run_validation(root)
     if validation_status != 0:
         return validation_status
-    write_package(root, out)
+    try:
+        write_package(root, out)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     print(f"Wrote {out}")
     return 0
 

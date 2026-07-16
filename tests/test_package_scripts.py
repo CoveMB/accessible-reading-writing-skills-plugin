@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import io
+import shutil
 import sys
 import tempfile
 import unittest
+import zipfile
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +17,8 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import install_codex_plugin
+import package_plugin
+import plugin_utils
 import run_package_checks
 import validate_plugin
 
@@ -47,6 +52,82 @@ class ContinuousIntegrationTests(unittest.TestCase):
         workflow_text = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
 
         self.assertIn(FULL_PACKAGE_CHECK_COMMAND, workflow_text)
+
+
+class PackageArchiveSafetyTests(unittest.TestCase):
+    def test_staged_validation_rejects_source_only_reference_and_preserves_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            source = temporary_root / "source-plugin"
+            shutil.copytree(
+                ROOT,
+                source,
+                ignore=shutil.ignore_patterns(
+                    ".git",
+                    "__pycache__",
+                    "*.pyc",
+                    "*.zip",
+                ),
+            )
+            references = source / "references"
+            references.mkdir()
+            (references / "development.md").write_text(
+                "# Development reference\n",
+                encoding="utf-8",
+            )
+            with (source / "README.md").open("a", encoding="utf-8") as readme:
+                readme.write("\n[Development reference](references/development.md)\n")
+            output = temporary_root / "plugin.zip"
+            output.write_bytes(b"existing archive")
+
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(0, package_plugin.run_validation(source))
+
+            with redirect_stdout(io.StringIO()):
+                with self.assertRaisesRegex(RuntimeError, "staged package validation failed"):
+                    package_plugin.write_package(source, output)
+
+            self.assertEqual(b"existing archive", output.read_bytes())
+            self.assertFalse(output.with_suffix(".zip.tmp").exists())
+
+    def test_archive_write_failure_preserves_archive_and_removes_temporary_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory) / "plugin.zip"
+            output.write_bytes(b"existing archive")
+
+            with redirect_stdout(io.StringIO()):
+                with mock.patch.object(
+                    zipfile.ZipFile,
+                    "write",
+                    autospec=True,
+                    side_effect=OSError("injected archive write failure"),
+                ):
+                    with self.assertRaisesRegex(OSError, "injected archive write failure"):
+                        package_plugin.write_package(ROOT, output)
+
+            self.assertEqual(b"existing archive", output.read_bytes())
+            self.assertFalse(output.with_suffix(".zip.tmp").exists())
+
+    def test_archive_membership_is_unchanged_and_extracted_package_validates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            output = temporary_root / "plugin.zip"
+
+            with redirect_stdout(io.StringIO()):
+                package_plugin.write_package(ROOT, output)
+
+            expected_members = {
+                f"{ROOT.name}/{path.relative_to(ROOT)}"
+                for path in plugin_utils.package_files(ROOT)
+            }
+            with zipfile.ZipFile(output) as archive:
+                self.assertEqual(expected_members, set(archive.namelist()))
+                extract_root = temporary_root / "extracted"
+                archive.extractall(extract_root)
+
+            packaged_root = extract_root / ROOT.name
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(0, run_package_checks.run_checks("install", packaged_root))
 
 
 class InstallerSafetyTests(unittest.TestCase):
