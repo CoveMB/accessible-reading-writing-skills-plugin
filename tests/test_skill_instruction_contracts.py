@@ -139,6 +139,46 @@ SHARED_SKILL_CONTRACTS: tuple[Contract, ...] = (
         ),
     ),
     (
+        "qualifier and negation scope stays attached",
+        (
+            (
+                "qualifiers and negations",
+                "same subject",
+                "action",
+                "object",
+                "does not preserve",
+                "scope or polarity",
+            ),
+        ),
+    ),
+    (
+        "consent and permission are not inferred",
+        (
+            (
+                "do not infer consent or permission",
+                "access",
+                "prior sharing",
+                "silence",
+                "plan to ask",
+            ),
+        ),
+    ),
+    (
+        "cleanup does not create high-stakes instructions",
+        (
+            (
+                "legal, medical, or financial advice",
+                "attributed content",
+                "direct instruction",
+            ),
+            (
+                "cleaning, structuring, and triage",
+                "do not authorize",
+                "direct legal, medical, or financial instructions",
+            ),
+        ),
+    ),
+    (
         "source and verification limits remain visible",
         (
             ("source basis and limits",),
@@ -214,6 +254,40 @@ SHARED_DOCUMENT_CONTRACTS: tuple[Contract, ...] = (
         "facts and interpretation stay separate",
         (
             ("separate visible facts", "interpretation", "uncertainty", "recommendation"),
+        ),
+    ),
+    (
+        "qualifier polarity and scope stay attached",
+        (
+            (
+                "qualifiers and negations",
+                "same subject",
+                "action",
+                "object",
+                "scope or polarity",
+            ),
+        ),
+    ),
+    (
+        "consent is not inferred from access or silence",
+        (
+            (
+                "do not infer consent or permission",
+                "access to material",
+                "prior sharing",
+                "silence",
+                "plan to ask",
+            ),
+        ),
+    ),
+    (
+        "triage does not become high-stakes advice",
+        (
+            (
+                "cleaning, structuring, and triage",
+                "do not authorize direct legal, medical, or financial instructions",
+                "attributed source content",
+            ),
         ),
     ),
     (

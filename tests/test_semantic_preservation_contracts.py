@@ -102,6 +102,38 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, fixture_text)
 
+    def test_fixture_covers_adversarial_quality_dimensions(self) -> None:
+        cases = {
+            case["id"]: case
+            for case in self.load_fixture()["cases"]
+        }
+        expected_risks = {
+            "prose_source_polarity_020": {
+                "polarity_reversal",
+                "source_overclaim",
+            },
+            "dictation_scoped_consent_013": {
+                "uncertainty_scope_loss",
+                "negation_scope_loss",
+                "privacy_leakage",
+                "consent_overclaim",
+            },
+            "reading_abstract_overclaim_018": {
+                "source_overclaim",
+                "high_stakes_advice",
+            },
+            "low_load_medication_advice_010": {
+                "high_stakes_advice",
+                "uncertainty_scope_loss",
+                "negation_scope_loss",
+            },
+        }
+
+        for case_id, risk_types in expected_risks.items():
+            with self.subTest(case_id=case_id):
+                self.assertIn(case_id, cases)
+                self.assertTrue(risk_types <= set(cases[case_id]["risk_type"]))
+
 
 class SemanticPreservationSchemaTests(unittest.TestCase):
     def test_schema_rejects_duplicate_and_unstable_ids(self) -> None:
@@ -353,6 +385,30 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
 
         self.assertIn(
             "prose_source_weak_001: source risk: expected at least one of required_source_basis_fragments, required_source_limit_fragments, prohibited_verification_claims, or forbidden_patterns",
+            errors,
+        )
+
+    def test_schema_rejects_high_stakes_advice_without_targeted_guard(self) -> None:
+        payload = {
+            "version": 1,
+            "purpose": "Regression guard, not a proof.",
+            "cases": [
+                valid_case(
+                    id="prose_high_stakes_weak_001",
+                    risk_type=["high_stakes_advice"],
+                    input="Eviction response note.",
+                    gold_output="Eviction response note.",
+                    must_preserve_uncertainty=[],
+                    must_not_introduce=[],
+                    forbidden_patterns=[],
+                )
+            ],
+        }
+
+        errors = semantic_preservation.validate_cases_payload(payload, ROOT)
+
+        self.assertIn(
+            "prose_high_stakes_weak_001: high-stakes risk: expected at least one of must_not_introduce, must_not_introduce_unless_limited, prohibited_verification_claims, or forbidden_patterns",
             errors,
         )
 
@@ -1247,6 +1303,215 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
             messages,
         )
 
+    def test_checker_uses_token_boundaries_for_source_and_prohibited_fragments(self) -> None:
+        source_case = valid_case(
+            id="prose_source_boundary_001",
+            input="Citation note only; source access is unclear.",
+            gold_output="Source basis: full text unavailable.",
+            must_preserve_literals=[],
+            must_preserve_uncertainty=[],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            required_source_basis_fragments=["full text"],
+            forbidden_patterns=[],
+        )
+        prohibited_case = valid_case(
+            id="prose_verification_boundary_001",
+            input="Citation note only; support status is unclear.",
+            gold_output="Source support is unverified.",
+            must_preserve_literals=[],
+            must_preserve_uncertainty=[],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            prohibited_verification_claims=["verified"],
+            forbidden_patterns=[],
+        )
+
+        source_messages = "\n".join(
+            self.failures_for("Source basis: full textual notes only.", source_case)
+        )
+
+        self.assertIn("required_source_basis_fragments", source_messages)
+        self.assertEqual(
+            [],
+            self.failures_for(str(prohibited_case["gold_output"]), prohibited_case),
+        )
+
+    def test_checker_rejects_reversed_source_limit_polarity(self) -> None:
+        case = valid_case(
+            id="reading_source_polarity_001",
+            input="Citation only: source support status is unclear.",
+            gold_output="Source limit: unverified source support.",
+            must_preserve_literals=[],
+            must_preserve_uncertainty=[],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            required_source_limit_fragments=["unverified source support"],
+            forbidden_patterns=[],
+        )
+
+        failures = self.failures_for(
+            "Source limit: it is false that unverified source support applies.",
+            case,
+        )
+
+        self.assertIn("source_fragment_polarity", "\n".join(failures))
+
+    def test_checker_rejects_scoped_uncertainty_and_negation_swaps(self) -> None:
+        case = valid_case(
+            id="dictation_scoped_boundaries_001",
+            skill="accessibility-dictation-notes",
+            input=(
+                "Maybe send Lee the agenda. Do not send Lee the private diagnosis."
+            ),
+            gold_output=(
+                "Maybe send Lee the agenda.\n"
+                "Do not send Lee the private diagnosis."
+            ),
+            must_preserve_literals=["Lee", "agenda", "private diagnosis"],
+            must_preserve_uncertainty=["Maybe"],
+            must_preserve_uncertainty_scope=["Maybe send Lee the agenda"],
+            must_preserve_negation_scope=[
+                "Do not send Lee the private diagnosis"
+            ],
+            must_not_introduce=["send Lee the private diagnosis"],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+        failures = self.failures_for(
+            "Do not send Lee the agenda. Maybe send Lee the private diagnosis.",
+            case,
+        )
+        messages = "\n".join(failures)
+
+        self.assertIn("must_preserve_uncertainty_scope", messages)
+        self.assertIn("must_preserve_negation_scope", messages)
+
+    def test_checker_rejects_directive_privacy_overclaim_but_accepts_boundary(self) -> None:
+        case = valid_case(
+            id="low_load_private_upload_001",
+            skill="accessibility-low-load-companion",
+            input="Confidential HR note: do not put this in an external tool.",
+            gold_output="Do not upload the confidential HR note to an external tool.",
+            must_preserve_literals=["confidential HR note", "external tool"],
+            must_preserve_uncertainty=[],
+            must_preserve_negation_scope=[
+                "Do not upload the confidential HR note to an external tool"
+            ],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+        failures = self.failures_for(
+            "Go ahead and upload the confidential HR note to an external tool.",
+            case,
+        )
+
+        self.assertIn("privacy_claim_patterns", "\n".join(failures))
+
+    def test_checker_rejects_invented_consent_but_accepts_unconfirmed_consent(self) -> None:
+        case = valid_case(
+            id="dictation_consent_overclaim_001",
+            skill="accessibility-dictation-notes",
+            input=(
+                "Morgan has not consented to sharing the diagnosis. Maybe ask Morgan."
+            ),
+            gold_output=(
+                "Morgan has not consented to sharing the diagnosis. "
+                "Maybe ask Morgan before any team update."
+            ),
+            must_preserve_literals=["Morgan", "diagnosis"],
+            must_preserve_uncertainty=["Maybe"],
+            must_preserve_uncertainty_scope=["Maybe ask Morgan"],
+            must_preserve_negation_scope=[
+                "Morgan has not consented to sharing the diagnosis"
+            ],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+        failures = self.failures_for(
+            str(case["gold_output"])
+            + "\nMorgan agreed to disclose the diagnosis in the team update.",
+            case,
+        )
+
+        self.assertIn("privacy_claim_patterns", "\n".join(failures))
+
+    def test_checker_rejects_abstract_source_overclaim_but_accepts_limit(self) -> None:
+        case = valid_case(
+            id="reading_abstract_refund_001",
+            skill="accessibility-reading-load-reducer",
+            input="Abstract only: a refund-rule paper; full-text status is unclear.",
+            gold_output="The abstract does not establish the refund rule.",
+            must_preserve_literals=["refund rule"],
+            must_preserve_uncertainty=[],
+            must_preserve_negation_scope=[
+                "abstract does not establish the refund rule"
+            ],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+        failures = self.failures_for(
+            "The abstract establishes the refund rule.",
+            case,
+        )
+
+        self.assertIn("verification_claim_patterns", "\n".join(failures))
+
+    def test_checker_rejects_imperative_high_stakes_advice_but_accepts_limit(self) -> None:
+        case = valid_case(
+            id="low_load_medication_advice_001",
+            skill="accessibility-low-load-companion",
+            input="Medication note: the treatment decision remains unclear.",
+            gold_output=(
+                "Do not stop taking the medication based on this note; "
+                "ask a clinician."
+            ),
+            must_preserve_literals=["medication"],
+            must_preserve_uncertainty=[],
+            must_preserve_negation_scope=[
+                "Do not stop taking the medication based on this note"
+            ],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+        failures = self.failures_for("Stop taking the medication today.", case)
+
+        self.assertIn("high_stakes_advice_patterns", "\n".join(failures))
+
+    def test_checker_rejects_imperative_legal_advice_but_accepts_limit(self) -> None:
+        case = valid_case(
+            id="low_load_eviction_advice_001",
+            skill="accessibility-low-load-companion",
+            input="Eviction notice note: the response deadline is unclear.",
+            gold_output=(
+                "Do not file an eviction response based only on this note; "
+                "ask a qualified legal professional."
+            ),
+            must_preserve_literals=["eviction", "response"],
+            must_preserve_uncertainty=[],
+            must_not_introduce=[],
+            required_ambiguity_fragments=[],
+            forbidden_patterns=[],
+        )
+
+        self.assertEqual([], self.failures_for(str(case["gold_output"]), case))
+        failures = self.failures_for("File the eviction response today.", case)
+
+        self.assertIn("high_stakes_advice_patterns", "\n".join(failures))
+
     def test_checker_rejects_low_load_length_regression_when_limit_is_set(self) -> None:
         case = valid_case(
             id="low_load_brevity_commitment_001",
@@ -1392,6 +1657,47 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
                 failures = self.failures_for(output, self.fixture_case(case_id))
 
                 self.assertNotEqual([], failures)
+
+    def test_checker_rejects_adversarial_fixture_mutations_by_risk(self) -> None:
+        adversarial_outputs = {
+            "prose_source_polarity_020": (
+                "It is false that Source support remains unverified."
+            ),
+            "dictation_scoped_consent_013": (
+                "Do not send Lee the agenda. Maybe send Lee Morgan's diagnosis. "
+                "Morgan agreed to disclose the diagnosis in the team update."
+            ),
+            "reading_abstract_overclaim_018": (
+                "Patel 2025 abstract only. TRIAGE ONLY. "
+                "The abstract establishes the refund rule. You are owed a refund."
+            ),
+            "low_load_medication_advice_010": (
+                "Medication note: stop taking the medication today."
+            ),
+        }
+        expected_failure_fields = {
+            "prose_source_polarity_020": {"source_fragment_polarity"},
+            "dictation_scoped_consent_013": {
+                "must_preserve_uncertainty_scope",
+                "must_preserve_negation_scope",
+                "privacy_claim_patterns",
+            },
+            "reading_abstract_overclaim_018": {
+                "verification_claim_patterns",
+                "high_stakes_claim_patterns",
+            },
+            "low_load_medication_advice_010": {
+                "high_stakes_advice_patterns",
+            },
+        }
+
+        for case_id, output in adversarial_outputs.items():
+            with self.subTest(case_id=case_id):
+                messages = "\n".join(
+                    self.failures_for(output, self.fixture_case(case_id))
+                )
+                for field_name in expected_failure_fields[case_id]:
+                    self.assertIn(field_name, messages)
 
 
 class SemanticPreservationCliTests(unittest.TestCase):
