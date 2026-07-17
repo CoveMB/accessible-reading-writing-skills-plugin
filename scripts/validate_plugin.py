@@ -30,6 +30,15 @@ from plugin_utils import (
 )
 
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SEMVER_RE = re.compile(
+    r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+    r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+    r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"
+)
+MARKETPLACE_NAME = "accessible-reading-writing-local"
+MARKETPLACE_DISPLAY_NAME = "Accessible Reading and Writing Local"
+MARKETPLACE_RELATIVE_PATH = Path(".agents/plugins/marketplace.json")
+MARKETPLACE_SAMPLE_RELATIVE_PATH = Path("marketplace.sample.json")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
 BACKTICK_REFERENCE_RE = re.compile(r"`([^`\n]+)`")
 LOCAL_REFERENCE_PREFIXES = (
@@ -177,6 +186,8 @@ def manifest_errors(root: Path) -> tuple[dict | None, Path, list[str]]:
             errors.append(f"plugin.json missing required/recommended field: {field}")
     if not NAME_RE.match(str(manifest.get("name", ""))):
         errors.append("plugin.json name should be kebab-case lowercase")
+    if not SEMVER_RE.match(str(manifest.get("version", ""))):
+        errors.append("plugin.json version must use semantic versioning")
 
     skills_value = manifest.get("skills", "skills")
     if not isinstance(skills_value, str) or not skills_value.strip():
@@ -196,6 +207,80 @@ def manifest_errors(root: Path) -> tuple[dict | None, Path, list[str]]:
         errors.append(f"plugin.json skills path does not exist: {skills_value}")
     errors.extend(broken_manifest_references(root, manifest_path, manifest))
     return manifest, skills_dir, errors
+
+
+def validate_release_contract(root: Path, manifest: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    version = str(manifest.get("version", ""))
+    readme_path = root / "README.md"
+    changelog_path = root / "CHANGELOG.md"
+    readme_lines = (
+        {line.strip() for line in readme_path.read_text(encoding="utf-8").splitlines()}
+        if readme_path.exists()
+        else set()
+    )
+    changelog_lines = (
+        {line.strip() for line in changelog_path.read_text(encoding="utf-8").splitlines()}
+        if changelog_path.exists()
+        else set()
+    )
+    if f"Version: {version}" not in readme_lines:
+        errors.append(f"README.md must report Version: {version}")
+    if f"## {version}" not in changelog_lines:
+        errors.append(f"CHANGELOG.md must include a {version} release heading")
+    return errors
+
+
+def marketplace_entry_errors(entry: object, expected_plugin_name: str) -> list[str]:
+    if not isinstance(entry, dict):
+        return ["marketplace plugin entry must be an object"]
+    errors: list[str] = []
+    if entry.get("name") != expected_plugin_name:
+        errors.append(
+            f"marketplace plugin name must match manifest name {expected_plugin_name!r}"
+        )
+    if entry.get("source") != {"source": "local", "path": "./"}:
+        errors.append("marketplace source must be the repository root: local ./")
+    if entry.get("policy") != {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL",
+    }:
+        errors.append("marketplace policy must use AVAILABLE and ON_INSTALL")
+    if entry.get("category") != "Productivity":
+        errors.append("marketplace category must be Productivity")
+    return errors
+
+
+def validate_marketplace(root: Path, manifest: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    marketplace_path = root / MARKETPLACE_RELATIVE_PATH
+    marketplace, marketplace_error = load_json_object_result(marketplace_path)
+    if marketplace_error is not None:
+        return [marketplace_error]
+    assert marketplace is not None
+
+    if marketplace.get("name") != MARKETPLACE_NAME:
+        errors.append(f"marketplace name must be {MARKETPLACE_NAME!r}")
+    interface = marketplace.get("interface")
+    if not isinstance(interface, dict) or interface.get("displayName") != MARKETPLACE_DISPLAY_NAME:
+        errors.append(f"marketplace displayName must be {MARKETPLACE_DISPLAY_NAME!r}")
+    plugins = marketplace.get("plugins")
+    if not isinstance(plugins, list) or len(plugins) != 1:
+        errors.append("marketplace must contain exactly one plugin entry")
+    else:
+        errors.extend(marketplace_entry_errors(plugins[0], str(manifest.get("name", ""))))
+
+    sample_path = root / MARKETPLACE_SAMPLE_RELATIVE_PATH
+    sample, sample_error = load_json_object_result(sample_path)
+    if sample_error is not None:
+        errors.append(sample_error)
+    elif sample is not None and (
+        sample.get("name") != marketplace.get("name")
+        or sample.get("interface") != marketplace.get("interface")
+        or sample.get("plugins") != marketplace.get("plugins")
+    ):
+        errors.append("marketplace.sample.json must match the canonical marketplace")
+    return errors
 
 
 def validate_agent_metadata(
@@ -353,6 +438,9 @@ def main() -> int:
     root = Path(args.plugin_root).expanduser().resolve()
     manifest, skills_dir, errors = manifest_errors(root)
     expected_version = str(manifest.get("version", "")) if manifest else ""
+    if manifest is not None:
+        errors.extend(validate_release_contract(root, manifest))
+        errors.extend(validate_marketplace(root, manifest))
     errors.extend(validate_skills(root, skills_dir, expected_version))
     errors.extend(validate_project_references(root))
 

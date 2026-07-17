@@ -3,7 +3,7 @@ name: accessibility-low-load-companion
 description: Route mixed or unclear accessibility bottlenecks for dyslexic, dysorthographic, dictation-heavy, reading-fatigued, or overwhelmed users only when rough notes, voice material, dense documents, spelling ambiguity, or next-step friction overlap and no smaller/specialist skill clearly owns the task.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: accessible-writing-support
 ---
 # Low-load accessibility companion

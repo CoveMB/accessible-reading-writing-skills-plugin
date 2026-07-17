@@ -3,7 +3,7 @@ name: accessibility-dictation-notes
 description: Use when dictated thoughts, voice transcripts, speech-to-text output, meeting notes, auto-captions, or rambling spoken fragments need to become structured notes, decisions, questions, ambiguities, and next actions without changing meaning.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: accessible-writing-support
 ---
 # Dictation to notes

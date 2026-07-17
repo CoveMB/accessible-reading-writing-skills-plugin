@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import io
+import re
 import shutil
 import sys
 import tempfile
 import unittest
 import zipfile
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -131,112 +132,347 @@ class PackageArchiveSafetyTests(unittest.TestCase):
 
 
 class InstallerSafetyTests(unittest.TestCase):
-    def test_dry_run_copy_does_not_create_destination(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = root / "source-plugin"
-            destination = root / "example-plugin"
-            source.mkdir()
-            write_plugin_manifest(source, "example-plugin")
-
-            with redirect_stdout(io.StringIO()):
-                install_codex_plugin.copy_plugin(source, destination, dry_run=True)
-
-            self.assertFalse(destination.exists())
-
-    def test_dry_run_link_does_not_create_destination(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = root / "source-plugin"
-            destination = root / "example-plugin"
-            source.mkdir()
-            write_plugin_manifest(source, "example-plugin")
-
-            with redirect_stdout(io.StringIO()):
-                install_codex_plugin.link_plugin(source, destination, dry_run=True)
-
-            self.assertFalse(destination.exists())
-
-    def test_link_plugin_creates_destination_symlink(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = root / "source-plugin"
-            destination = root / "example-plugin"
-            source.mkdir()
-            write_plugin_manifest(source, "example-plugin")
-
-            with redirect_stdout(io.StringIO()):
-                install_codex_plugin.link_plugin(source, destination, dry_run=False)
-
-            self.assertTrue(destination.is_symlink())
-            self.assertEqual(destination.resolve(), source.resolve())
-
-    def test_link_plugin_cache_creates_version_symlink(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = root / "source-plugin"
-            destination = root / "cache" / "example-plugin" / "1.0.0"
-            source.mkdir()
-            write_plugin_manifest(source, "example-plugin")
-            manifest_path = source / ".codex-plugin" / "plugin.json"
-            manifest_path.write_text(
-                json.dumps({"name": "example-plugin", "version": "1.0.0"}),
-                encoding="utf-8",
-            )
-
-            with redirect_stdout(io.StringIO()):
-                install_codex_plugin.link_plugin_cache(source, destination, dry_run=False)
-
-            self.assertTrue(destination.is_symlink())
-            self.assertEqual(destination.resolve(), source.resolve())
-
-    def test_link_plugin_cache_rejects_unexpected_path(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            source = root / "source-plugin"
-            destination = root / "cache" / "other-plugin" / "1.0.0"
-            source.mkdir()
-            write_plugin_manifest(source, "example-plugin")
-            manifest_path = source / ".codex-plugin" / "plugin.json"
-            manifest_path.write_text(
-                json.dumps({"name": "example-plugin", "version": "1.0.0"}),
-                encoding="utf-8",
-            )
-
-            with self.assertRaises(ValueError):
-                install_codex_plugin.link_plugin_cache(source, destination, dry_run=False)
-
-    def test_destination_with_unrelated_content_is_not_safe(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            destination = Path(temporary_directory) / "example-plugin"
-            destination.mkdir()
-            (destination / "notes.txt").write_text("keep this file", encoding="utf-8")
-
-            self.assertFalse(
-                install_codex_plugin.is_safe_destination(destination, "example-plugin")
-            )
-
-    def test_marketplace_entry_replacement_preserves_other_plugins(self) -> None:
-        existing = {
-            "name": "local-personal-plugins",
-            "interface": {"displayName": "Local Personal Plugins"},
-            "plugins": [
-                {"name": "other-plugin", "source": {"path": "./other"}},
-                {"name": "example-plugin", "source": {"path": "./old"}},
-            ],
-        }
-        entry = install_codex_plugin.marketplace_entry("example-plugin", "./new")
-
-        updated = install_codex_plugin.replace_marketplace_entry(existing, entry)
-
-        self.assertEqual(
-            [plugin["name"] for plugin in updated["plugins"]],
-            ["other-plugin", "example-plugin"],
+    def marketplace_list_result(self, root: Path) -> mock.Mock:
+        return mock.Mock(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "marketplaces": [
+                        {
+                            "name": install_codex_plugin.MARKETPLACE_NAME,
+                            "root": str(root),
+                        }
+                    ]
+                }
+            ),
+            stderr="",
         )
-        self.assertEqual(updated["plugins"][1]["source"]["path"], "./new")
+
+    def test_dry_run_does_not_invoke_codex(self) -> None:
+        output = io.StringIO()
+        with (
+            mock.patch.object(install_codex_plugin, "run_validation"),
+            mock.patch.object(install_codex_plugin.shutil, "which", return_value="/usr/bin/codex"),
+            mock.patch.object(install_codex_plugin.subprocess, "run") as run,
+            redirect_stdout(output),
+        ):
+            status = install_codex_plugin.main(
+                ["--plugin-root", str(ROOT), "--dry-run"]
+            )
+
+        self.assertEqual(0, status)
+        run.assert_not_called()
+        self.assertIn(f"codex plugin marketplace add {ROOT}", output.getvalue())
+        self.assertIn(
+            "codex plugin add "
+            "accessible-reading-writing-plugin@accessible-reading-writing-local",
+            output.getvalue(),
+        )
+        self.assertIn("Install the plugin through Codex:", output.getvalue())
+        self.assertNotIn("Install or update", output.getvalue())
+
+    def test_missing_marketplace_is_registered_through_codex(self) -> None:
+        list_result = mock.Mock(returncode=0, stdout='{"marketplaces": []}', stderr="")
+        add_result = mock.Mock(returncode=0, stdout="{}", stderr="")
+        with (
+            mock.patch.object(install_codex_plugin, "run_validation"),
+            mock.patch.object(install_codex_plugin.shutil, "which", return_value="/usr/bin/codex"),
+            mock.patch.object(
+                install_codex_plugin.subprocess,
+                "run",
+                side_effect=[list_result, add_result],
+            ) as run,
+            redirect_stdout(io.StringIO()),
+        ):
+            status = install_codex_plugin.main(["--plugin-root", str(ROOT)])
+
+        self.assertEqual(0, status)
+        self.assertEqual(
+            [
+                ["codex", "plugin", "marketplace", "list", "--json"],
+                ["codex", "plugin", "marketplace", "add", str(ROOT), "--json"],
+            ],
+            [call.args[0] for call in run.call_args_list],
+        )
+
+    def test_marketplace_command_failure_preserves_exit_status(self) -> None:
+        list_result = mock.Mock(returncode=23, stdout="", stderr="injected failure")
+        with (
+            mock.patch.object(install_codex_plugin, "run_validation"),
+            mock.patch.object(install_codex_plugin.shutil, "which", return_value="/usr/bin/codex"),
+            mock.patch.object(
+                install_codex_plugin.subprocess,
+                "run",
+                return_value=list_result,
+            ),
+            redirect_stderr(io.StringIO()),
+        ):
+            status = install_codex_plugin.main(["--plugin-root", str(ROOT)])
+
+        self.assertEqual(23, status)
+
+    def test_existing_marketplace_at_same_root_is_reused(self) -> None:
+        with (
+            mock.patch.object(install_codex_plugin, "run_validation"),
+            mock.patch.object(install_codex_plugin.shutil, "which", return_value="/usr/bin/codex"),
+            mock.patch.object(
+                install_codex_plugin.subprocess,
+                "run",
+                return_value=self.marketplace_list_result(ROOT),
+            ) as run,
+            redirect_stdout(io.StringIO()),
+        ):
+            status = install_codex_plugin.main(["--plugin-root", str(ROOT)])
+
+        self.assertEqual(0, status)
+        self.assertEqual(1, run.call_count)
+
+    def test_same_marketplace_name_at_different_root_is_rejected(self) -> None:
+        other_root = ROOT.parent / "other-plugin"
+        with (
+            mock.patch.object(install_codex_plugin, "run_validation"),
+            mock.patch.object(install_codex_plugin.shutil, "which", return_value="/usr/bin/codex"),
+            mock.patch.object(
+                install_codex_plugin.subprocess,
+                "run",
+                return_value=self.marketplace_list_result(other_root),
+            ) as run,
+            redirect_stdout(io.StringIO()),
+            redirect_stderr(io.StringIO()),
+        ):
+            status = install_codex_plugin.main(["--plugin-root", str(ROOT)])
+
+        self.assertEqual(1, status)
+        self.assertEqual(1, run.call_count)
+
+    def test_link_is_a_deprecated_registration_alias(self) -> None:
+        output = io.StringIO()
+        with (
+            mock.patch.object(install_codex_plugin, "run_validation"),
+            mock.patch.object(install_codex_plugin.shutil, "which", return_value="/usr/bin/codex"),
+            mock.patch.object(install_codex_plugin.subprocess, "run") as run,
+            redirect_stdout(output),
+        ):
+            status = install_codex_plugin.main(
+                ["--plugin-root", str(ROOT), "--link", "--dry-run"]
+            )
+
+        self.assertEqual(0, status)
+        run.assert_not_called()
+        self.assertIn("deprecated", output.getvalue().lower())
+        self.assertIn("no symlink", output.getvalue().lower())
+
+    def test_installer_does_not_manage_plugin_files_or_cache(self) -> None:
+        installer_text = (SCRIPTS / "install_codex_plugin.py").read_text(encoding="utf-8")
+
+        for forbidden_text in [
+            ".codex\" / \"plugins",
+            "copy_plugin",
+            "link_plugin",
+            "link_plugin_cache",
+            "symlink_to",
+        ]:
+            self.assertNotIn(forbidden_text, installer_text)
+
+
+class MarketplaceContractTests(unittest.TestCase):
+    def test_release_versions_match(self) -> None:
+        manifest = plugin_utils.load_plugin_manifest(ROOT)
+        version = manifest["version"]
+
+        self.assertEqual("1.1.0", version)
+        readme_lines = {
+            line.strip()
+            for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
+        }
+        changelog_lines = {
+            line.strip()
+            for line in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+        }
+        self.assertIn(f"Version: {version}", readme_lines)
+        self.assertIn(f"## {version}", changelog_lines)
+        for skill_path in sorted((ROOT / "skills").glob("*/SKILL.md")):
+            frontmatter = plugin_utils.parse_markdown_frontmatter(
+                skill_path.read_text(encoding="utf-8")
+            )
+            self.assertEqual(version, frontmatter["metadata"]["version"])
+
+    def test_repository_marketplace_matches_manifest(self) -> None:
+        manifest = plugin_utils.load_plugin_manifest(ROOT)
+        marketplace = plugin_utils.load_json_object(
+            ROOT / ".agents" / "plugins" / "marketplace.json"
+        )
+
+        self.assertEqual("accessible-reading-writing-local", marketplace["name"])
+        self.assertEqual(1, len(marketplace["plugins"]))
+        entry = marketplace["plugins"][0]
+        self.assertEqual(manifest["name"], entry["name"])
+        self.assertEqual({"source": "local", "path": "./"}, entry["source"])
+        self.assertEqual(
+            {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+            entry["policy"],
+        )
+        self.assertEqual("Productivity", entry["category"])
+
+    def test_marketplace_sample_matches_canonical_entry(self) -> None:
+        canonical = plugin_utils.load_json_object(
+            ROOT / ".agents" / "plugins" / "marketplace.json"
+        )
+        sample = plugin_utils.load_json_object(ROOT / "marketplace.sample.json")
+
+        self.assertEqual(canonical["name"], sample["name"])
+        self.assertEqual(canonical["plugins"], sample["plugins"])
+
+    def test_public_instructions_do_not_directly_mutate_codex_cache(self) -> None:
+        command_pattern = re.compile(
+            r"^\s*(?:cp|del|ln|mkdir|mv|rm|rmdir|Remove-Item)\b.*"
+            r"\.codex[/\\]plugins[/\\]cache",
+            re.IGNORECASE,
+        )
+        for documentation_path in [
+            ROOT / "README.md",
+            ROOT / "docs" / "MARKETPLACE_INSTALLATION_AND_UPDATE_PLAN.md",
+        ]:
+            for line in documentation_path.read_text(encoding="utf-8").splitlines():
+                self.assertIsNone(command_pattern.search(line), f"{documentation_path}: {line}")
+
+    def test_readme_documents_the_marketplace_identity_change_from_1_0(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        migration_section = readme.partition("## Upgrade from 1.0.0")[2].partition(
+            "## Update"
+        )[0]
+
+        self.assertTrue(migration_section)
+        self.assertIn("local-personal-plugins", migration_section)
+        self.assertIn("marketplaceName", migration_section)
+        self.assertIn(
+            "codex plugin add "
+            "accessible-reading-writing-plugin@accessible-reading-writing-local",
+            migration_section,
+        )
+        self.assertIn(
+            "codex plugin remove "
+            "accessible-reading-writing-plugin@local-personal-plugins",
+            migration_section,
+        )
+        self.assertLess(
+            migration_section.index(
+                "codex plugin add "
+                "accessible-reading-writing-plugin@accessible-reading-writing-local"
+            ),
+            migration_section.index(
+                "codex plugin remove "
+                "accessible-reading-writing-plugin@local-personal-plugins"
+            ),
+        )
+
+    def test_update_instructions_do_not_expect_an_available_entry_for_installed_plugin(
+        self,
+    ) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        update_section = readme.partition("## Update")[2].partition("## Roll back")[0]
+
+        self.assertTrue(update_section)
+        self.assertNotIn("--available", update_section)
+        self.assertNotIn("available entry", update_section.lower())
+        self.assertIn("codex plugin marketplace list --json", update_section)
+        self.assertIn(".codex-plugin/plugin.json", update_section)
+
+    def test_rollback_uses_the_verified_legacy_installer_path(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        rollback_section = readme.partition("## Roll back to 1.0.0")[2].partition(
+            "## Upgrade from earlier local drafts"
+        )[0]
+
+        self.assertTrue(rollback_section)
+        self.assertIn("34aafd943a285ece7c64fbbe8686f902745b0a3c", rollback_section)
+        self.assertIn("git worktree add --detach", rollback_section)
+        self.assertIn("./install.sh", rollback_section)
+        self.assertIn(
+            "codex plugin add "
+            "accessible-reading-writing-plugin@local-personal-plugins",
+            rollback_section,
+        )
+        self.assertIn(
+            "codex plugin remove "
+            "accessible-reading-writing-plugin@accessible-reading-writing-local",
+            rollback_section,
+        )
+        self.assertLess(
+            rollback_section.index(
+                "codex plugin add "
+                "accessible-reading-writing-plugin@local-personal-plugins"
+            ),
+            rollback_section.index(
+                "codex plugin remove "
+                "accessible-reading-writing-plugin@accessible-reading-writing-local"
+            ),
+        )
 
 
 class ValidatorTests(unittest.TestCase):
+    def test_release_contract_requires_exact_version_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "README.md").write_text(
+                "Version: 1.1.0-alpha\n",
+                encoding="utf-8",
+            )
+            (root / "CHANGELOG.md").write_text(
+                "## 1.1.0-alpha\n",
+                encoding="utf-8",
+            )
+
+            errors = validate_plugin.validate_release_contract(
+                root,
+                {"version": "1.1.0"},
+            )
+
+            self.assertIn("README.md must report Version: 1.1.0", errors)
+            self.assertIn("CHANGELOG.md must include a 1.1.0 release heading", errors)
+
+    def test_marketplace_plugin_name_must_match_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            marketplace_path = root / ".agents" / "plugins" / "marketplace.json"
+            marketplace_path.parent.mkdir(parents=True)
+            marketplace_path.write_text(
+                json.dumps(
+                    {
+                        "name": "accessible-reading-writing-local",
+                        "interface": {
+                            "displayName": "Accessible Reading and Writing Local"
+                        },
+                        "plugins": [
+                            {
+                                "name": "wrong-plugin",
+                                "source": {"source": "local", "path": "./"},
+                                "policy": {
+                                    "installation": "AVAILABLE",
+                                    "authentication": "ON_INSTALL",
+                                },
+                                "category": "Productivity",
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (root / "marketplace.sample.json").write_text(
+                marketplace_path.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+
+            errors = validate_plugin.validate_marketplace(
+                root,
+                {"name": "expected-plugin"},
+            )
+
+            self.assertIn(
+                "marketplace plugin name must match manifest name 'expected-plugin'",
+                errors,
+            )
+
     def test_skill_frontmatter_name_must_match_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

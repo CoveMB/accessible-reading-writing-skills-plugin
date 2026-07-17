@@ -24,10 +24,10 @@ if ([version]$PythonVersion -lt [version]"3.10") {
 $env:PYTHONDONTWRITEBYTECODE = "1"
 
 if ($args -notcontains "--dry-run") {
-    Write-Host "Tip: run .\install.ps1 --dry-run to preview changes before installing."
+    Write-Host "Tip: run .\install.ps1 --dry-run to preview marketplace registration."
 }
 
 & $Python.Source scripts\install_codex_plugin.py @args
 if ($LASTEXITCODE -ne 0) {
-    throw "Install failed with exit code $LASTEXITCODE."
+    throw "Marketplace setup failed with exit code $LASTEXITCODE."
 }

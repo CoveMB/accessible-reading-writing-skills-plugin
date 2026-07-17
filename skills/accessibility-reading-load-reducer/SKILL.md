@@ -3,7 +3,7 @@ name: accessibility-reading-load-reducer
 description: Use when dense documents, long emails, instructions, policies, articles, source packets, reading lists, or long notes need low-load read-skim-park-skip triage, close-reading targets, extraction priorities, uncertainty labels, and next actions.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   category: accessible-writing-support
 ---
 # Reading load reducer

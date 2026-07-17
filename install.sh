@@ -15,7 +15,7 @@ fi
 export PYTHONDONTWRITEBYTECODE=1
 
 if [[ " $* " != *" --dry-run "* ]]; then
-  echo "Tip: run ./install.sh --dry-run to preview changes before installing."
+  echo "Tip: run ./install.sh --dry-run to preview marketplace registration."
 fi
 
 set +e
@@ -24,6 +24,6 @@ status=$?
 set -e
 
 if [[ "$status" -ne 0 ]]; then
-  echo "Install failed with exit code ${status}." >&2
+  echo "Marketplace setup failed with exit code ${status}." >&2
   exit "$status"
 fi

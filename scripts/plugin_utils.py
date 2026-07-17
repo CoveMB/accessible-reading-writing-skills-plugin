@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 ALLOWED_PACKAGE_DIRECTORIES = {
+    ".agents",
     ".codex-plugin",
     "assets",
     "docs",
