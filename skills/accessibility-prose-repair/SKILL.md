@@ -3,7 +3,7 @@ name: accessibility-prose-repair
 description: Use when existing prose needs meaning-preserving spelling, grammar, punctuation, sentence-boundary, paragraph-break, typo, or local readability repair for dyslexic, dysorthographic, low-load, or accessibility-focused writing support.
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.0.0"
   category: accessible-writing-support
 ---
 # Accessible prose repair

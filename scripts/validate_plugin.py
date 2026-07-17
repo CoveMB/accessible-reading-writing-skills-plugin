@@ -38,7 +38,6 @@ SEMVER_RE = re.compile(
 MARKETPLACE_NAME = "accessible-reading-writing-local"
 MARKETPLACE_DISPLAY_NAME = "Accessible Reading and Writing Local"
 MARKETPLACE_RELATIVE_PATH = Path(".agents/plugins/marketplace.json")
-MARKETPLACE_SAMPLE_RELATIVE_PATH = Path("marketplace.sample.json")
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
 BACKTICK_REFERENCE_RE = re.compile(r"`([^`\n]+)`")
 LOCAL_REFERENCE_PREFIXES = (
@@ -57,7 +56,6 @@ LOCAL_REFERENCE_ROOT_FILES = {
     "LICENSE",
     "MODE_REGISTRY.md",
     "README.md",
-    "marketplace.sample.json",
     "validate.sh",
 }
 REFERENCE_FILE_SUFFIXES = {".md", ".yaml", ".yml"}
@@ -270,16 +268,6 @@ def validate_marketplace(root: Path, manifest: dict[str, Any]) -> list[str]:
     else:
         errors.extend(marketplace_entry_errors(plugins[0], str(manifest.get("name", ""))))
 
-    sample_path = root / MARKETPLACE_SAMPLE_RELATIVE_PATH
-    sample, sample_error = load_json_object_result(sample_path)
-    if sample_error is not None:
-        errors.append(sample_error)
-    elif sample is not None and (
-        sample.get("name") != marketplace.get("name")
-        or sample.get("interface") != marketplace.get("interface")
-        or sample.get("plugins") != marketplace.get("plugins")
-    ):
-        errors.append("marketplace.sample.json must match the canonical marketplace")
     return errors
 
 

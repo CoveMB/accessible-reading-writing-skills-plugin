@@ -25,9 +25,6 @@ ALLOWED_PACKAGE_ROOT_FILES = {
     "LICENSE",
     "MODE_REGISTRY.md",
     "README.md",
-    "install.ps1",
-    "install.sh",
-    "marketplace.sample.json",
     "validate.sh",
 }
 EXCLUDED_DIRECTORIES = {
