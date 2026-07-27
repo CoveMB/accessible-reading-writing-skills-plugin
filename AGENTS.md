@@ -81,3 +81,58 @@ Apply this coherence pass to every change that can affect plugin discovery, rele
    - inspect the final diff for stale or duplicated requirements
    - for discovery, marketplace, packaging, or runtime-loading changes, validate the staged package and do not claim installed-runtime coherence until it has been checked in a fresh Codex task or CLI session
    - request user authorization before modifying an installed plugin or other external state
+
+## Test and evaluation economy
+
+Optimize validation for confidence per token and minute. Token savings must never excuse a known deterministic failure.
+
+### Validation sequence
+
+1. Before running tests, identify:
+   - the smallest targeted deterministic check;
+   - the canonical full validation command;
+   - any expensive, nondeterministic, live-model, visual, network, or external evaluation.
+2. During implementation, run only targeted tests relevant to the changed behavior.
+3. Run the canonical full suite once after the coherent implementation batch is complete.
+4. Rerun the canonical suite only when the tested tree changes materially, including after conflict resolution, rebase, or merge.
+5. Do not rerun an unchanged command against an unchanged tested tree. Reuse the recorded result.
+
+### Expensive and nondeterministic evaluations
+
+- Do not use live-model or external evaluations as an open-ended implementation loop.
+- Preselect the cases, controls, acceptance criteria, and maximum attempts before starting.
+- Allow at most:
+  - one baseline execution; and
+  - one confirmation execution after a material repair.
+- An additional execution requires either:
+  - a new concrete hypothesis supported by evidence;
+  - a material change affecting the evaluated behavior; or
+  - explicit user direction.
+- If a nondeterministic evaluation fails inconsistently, rerun it at most once. If results still conflict, classify the evidence as inconclusive and report it instead of repeatedly sampling.
+- Do not expand the evaluation matrix during implementation unless a newly discovered material risk requires it.
+
+### Stop conditions
+
+Stop implementation and validation when all of the following are true:
+
+- targeted deterministic checks pass;
+- the canonical full suite passes on the current tree;
+- required structural and security validation passes;
+- no material review finding remains;
+- remaining limitations are explicitly documented and accepted.
+
+Accepted evidence limitations are closed decisions. Do not reopen them without new evidence or explicit user direction.
+
+### Delegated work
+
+- Subagents must not run the full suite or live evaluations unless explicitly assigned.
+- Use at most one bounded final reviewer for a coherent task unless that reviewer identifies a material defect.
+- Reviewers should report only merge-blocking or materially beneficial findings, not style preferences.
+- Do not delegate repeated reviews of unchanged code.
+
+### Output discipline
+
+- Prefer quiet or summary test output.
+- Report the command, commit or tree identity, exit status, and test totals.
+- Preserve verbose logs only when diagnosing a failure.
+- Do not paste or repeatedly inspect successful verbose output.
