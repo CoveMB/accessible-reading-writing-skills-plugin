@@ -699,53 +699,117 @@ class SharedDocumentContractTests(unittest.TestCase):
         )
 
     def test_routing_matrix_delegates_suggestion_policy_to_one_owner(self) -> None:
-        text = read_text(DOCS_ROOT / "ROUTING_MATRIX.md")
-        normalized = normalized_text(text)
-
-        retired_fragments = (
-            "## Suggested next step gates",
-            "### Spoken material hides decisions, claims, questions, or tasks",
-            "### Dense material or document volume blocks action",
-            "### Existing prose has spelling, grammar, punctuation, or sentence-boundary friction",
-            "### Mixed bottlenecks block the next useful action",
-            "### No unresolved accessibility risk remains",
-            "Allowed next skill:",
-            "Blocked early suggestion:",
-        )
-        for fragment in retired_fragments:
-            with self.subTest(retired_fragment=fragment):
-                self.assertNotIn(fragment, text)
-
-        owner_link = "[Auto-selection guardrails](AUTO_SELECTION_GUARDRAILS.md)"
-        self.assertEqual(1, text.count(owner_link))
-        self.assertIn(
-            "apply them after selecting the primary route above",
-            normalized,
+        routing_text = read_text(DOCS_ROOT / "ROUTING_MATRIX.md")
+        self.assertEqual(
+            ["Primary routes"],
+            re.findall(r"(?m)^## ([^\n]+)$", routing_text),
         )
 
-        primary_routes = (
+        primary_routes = markdown_section(routing_text, "Primary routes")
+        expected_routes = (
             (
-                "### Voice, dictation, or transcript first",
-                "Route: `accessibility-dictation-notes`.",
+                "Voice, dictation, or transcript first",
+                "accessibility-dictation-notes",
             ),
-            (
-                "### Reading volume first",
-                "Route: `accessibility-reading-load-reducer`.",
-            ),
-            (
-                "### Existing prose repair first",
-                "Route: `accessibility-prose-repair`.",
-            ),
-            (
-                "### Mixed or unclear bottleneck",
-                "Route: `accessibility-low-load-companion`.",
-            ),
+            ("Reading volume first", "accessibility-reading-load-reducer"),
+            ("Existing prose repair first", "accessibility-prose-repair"),
+            ("Mixed or unclear bottleneck", "accessibility-low-load-companion"),
         )
-        self.assertIn("## Primary routes", text)
-        for heading, route in primary_routes:
-            with self.subTest(primary_route=heading):
-                self.assertIn(heading, text)
-                self.assertIn(route, text)
+        actual_routes = tuple(
+            re.findall(
+                r"(?m)^### ([^\n]+)\n\nRoute: "
+                r"`(accessibility-[a-z0-9-]+)`(?:\.|$)",
+                primary_routes,
+            )
+        )
+        self.assertEqual(expected_routes, actual_routes)
+        self.assertEqual(4, len(re.findall(r"(?m)^### [^\n]+$", primary_routes)))
+
+        mixed_route = normalized_text(
+            primary_routes.split("### Mixed or unclear bottleneck", 1)[1]
+        )
+        for term in ("only", "mixed", "unclear", "specialist"):
+            self.assertIn(term, mixed_route)
+
+        owner_links = list(
+            re.finditer(
+                r"\[[^\]\n]+\]\((?P<target>AUTO_SELECTION_GUARDRAILS\.md)\)",
+                routing_text,
+            )
+        )
+        self.assertEqual(1, len(owner_links))
+        owner_link = owner_links[0]
+        owner_path = (DOCS_ROOT / owner_link.group("target")).resolve()
+        expected_owner = (DOCS_ROOT / "AUTO_SELECTION_GUARDRAILS.md").resolve()
+        self.assertEqual(expected_owner, owner_path)
+        self.assertTrue(owner_path.is_file())
+        self.assertLess(
+            max(
+                routing_text.index(f"Route: `{skill}`")
+                for _, skill in expected_routes
+            ),
+            owner_link.start(),
+        )
+
+        delegation_start = routing_text.rfind("\n\n", 0, owner_link.start()) + 2
+        delegation_text = routing_text[delegation_start:].strip()
+        self.assertEqual(1, len(re.split(r"\n\s*\n", delegation_text)))
+        delegation = normalized_text(delegation_text)
+        for term in ("owned", "after", "primary route"):
+            self.assertIn(term, delegation)
+
+        owner_text = read_text(owner_path)
+        selection_rules = markdown_section(owner_text, "Selection rules")
+        selection_items = [
+            normalized_text(item)
+            for item in re.findall(r"(?m)^-\s+(.+)$", selection_rules)
+        ]
+        specialist_terms = (
+            "prefer",
+            *(skill for _, skill in expected_routes[:3]),
+            "bottleneck",
+        )
+        mixed_fallback_terms = (
+            expected_routes[-1][1],
+            "only",
+            "mixed",
+            "unclear",
+            "specialist",
+        )
+        for terms in (specialist_terms, mixed_fallback_terms):
+            self.assertTrue(
+                any(all(term in item for term in terms) for item in selection_items)
+            )
+
+        suggestion_heading = "## Suggested next step policy\n"
+        suggestion_start = owner_text.find(suggestion_heading)
+        self.assertNotEqual(-1, suggestion_start)
+        suggestion_policy = owner_text[suggestion_start + len(suggestion_heading) :]
+        normalized_policy = normalized_text(suggestion_policy)
+        policy_terms = (
+            ("optional", "omit", "default"),
+            ("only", "all", "gates"),
+            ("one", "suggested skill", "max"),
+        )
+        for terms in policy_terms:
+            self.assertTrue(all(term in normalized_policy for term in terms))
+
+        suggestion_gates = [
+            normalized_text(item)
+            for item in re.findall(r"(?m)^-\s+(.+)$", suggestion_policy)
+        ]
+        self.assertGreaterEqual(len(suggestion_gates), 5)
+        gate_terms = (
+            ("unresolved", "risk"),
+            ("one", "skill", "reduces", "risk"),
+            ("input", "exists"),
+            ("suggestion", "bottleneck"),
+            ("explanation", "lines"),
+        )
+        for terms in gate_terms:
+            self.assertTrue(
+                any(all(term in gate for term in terms) for gate in suggestion_gates)
+            )
 
     def test_scan_docs_do_not_use_wide_markdown_tables(self) -> None:
         docs_to_check = (
