@@ -725,11 +725,16 @@ class SharedDocumentContractTests(unittest.TestCase):
         self.assertEqual(expected_routes, actual_routes)
         self.assertEqual(4, len(re.findall(r"(?m)^### [^\n]+$", primary_routes)))
 
-        mixed_route = normalized_text(
-            primary_routes.split("### Mixed or unclear bottleneck", 1)[1]
+        mixed_route = primary_routes.split("### Mixed or unclear bottleneck", 1)[1]
+        positive_route_match = re.search(
+            r"(?ms)^Use\b.*?(?=^\s*$|\Z)",
+            mixed_route,
         )
+        self.assertIsNotNone(positive_route_match)
+        assert positive_route_match is not None
+        positive_route = normalized_text(positive_route_match.group())
         for term in ("only", "mixed", "unclear", "specialist"):
-            self.assertIn(term, mixed_route)
+            self.assertIn(term, positive_route)
 
         owner_links = list(
             re.finditer(
