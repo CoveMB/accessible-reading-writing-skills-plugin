@@ -280,6 +280,12 @@ class ValidatorTests(unittest.TestCase):
                 "marketplace must contain exactly one plugin entry",
             ),
             (
+                "multiple-plugin-entries",
+                ("plugins",),
+                valid_marketplace["plugins"] * 2,
+                "marketplace must contain exactly one plugin entry",
+            ),
+            (
                 "plugin-name",
                 ("plugins", 0, "name"),
                 "wrong-plugin",
@@ -292,9 +298,21 @@ class ValidatorTests(unittest.TestCase):
                 "marketplace source must be the repository root: local ./",
             ),
             (
+                "non-local-source",
+                ("plugins", 0, "source"),
+                {"source": "git", "path": "./"},
+                "marketplace source must be the repository root: local ./",
+            ),
+            (
                 "policy",
                 ("plugins", 0, "policy"),
                 {"installation": "AVAILABLE", "authentication": "NONE"},
+                "marketplace policy must use AVAILABLE and ON_INSTALL",
+            ),
+            (
+                "non-available-installation",
+                ("plugins", 0, "policy"),
+                {"installation": "INSTALLED", "authentication": "ON_INSTALL"},
                 "marketplace policy must use AVAILABLE and ON_INSTALL",
             ),
             (
@@ -331,6 +349,26 @@ class ValidatorTests(unittest.TestCase):
                     self.assertEqual([], errors)
                 else:
                     self.assertEqual([expected_error], errors)
+
+    def test_marketplace_validator_rejects_malformed_json(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marketplace_path = root / ".agents" / "plugins" / "marketplace.json"
+            marketplace_path.parent.mkdir(parents=True)
+            marketplace_path.write_text("{", encoding="utf-8")
+
+            errors = validate_plugin.validate_marketplace(
+                root,
+                {"name": "expected-plugin"},
+            )
+
+            self.assertEqual(
+                [
+                    f"{marketplace_path}: malformed JSON at line 1, column 2: "
+                    "Expecting property name enclosed in double quotes"
+                ],
+                errors,
+            )
 
     def test_skill_frontmatter_name_must_match_folder(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
