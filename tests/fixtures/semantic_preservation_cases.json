@@ -921,9 +921,7 @@
         "verified synthesis"
       ],
       "requires_triage_only_warning": true,
-      "forbidden_patterns": [
-        "verified synthesis"
-      ],
+      "forbidden_patterns": [],
       "notes": "Title-only access may support a provisional park decision, but it must not become a claim about what the article proves."
     },
     {
@@ -1056,8 +1054,7 @@
       ],
       "requires_triage_only_warning": true,
       "forbidden_patterns": [
-        "Item B[^\\n]*\\|\\s*skip\\s*\\|",
-        "source support is verified"
+        "Item B[^\\n]*\\|\\s*skip\\s*\\|"
       ],
       "notes": "The ambiguous title-only item must be parked rather than confidently skipped; decisions should be tied to the memo goal and visible material."
     },
@@ -1104,9 +1101,7 @@
         "policy confirms coverage"
       ],
       "requires_triage_only_warning": true,
-      "forbidden_patterns": [
-        "policy confirms coverage"
-      ],
+      "forbidden_patterns": [],
       "notes": "Insurance headings can guide reading priority, but they cannot verify medication coverage or become medical, financial, legal, or insurance advice."
     },
     {
@@ -1147,7 +1142,6 @@
       ],
       "requires_triage_only_warning": true,
       "forbidden_patterns": [
-        "full text confirms",
         "\\[[0-9]+\\]"
       ],
       "notes": "Abstracts can identify close-reading targets, but they must not be treated as full-text verification or final source support for a paper."

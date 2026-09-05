@@ -151,6 +151,12 @@ In the committed fixture, omit empty `required_ambiguity_fragments` and
 `must_preserve_uncertainty` fields; the schema and evaluator continue to
 accept empty lists.
 
+Assign each exact guard to only one of `must_not_introduce`,
+`forbidden_patterns`, and `prohibited_verification_claims`. Use
+`prohibited_verification_claims` as the boundary-aware owner for plain
+verification claims, and keep distinct regular-expression guards in
+`forbidden_patterns`.
+
 `notes` remains a short, non-executable human explanation of each case's risk.
 
 ## Risk-label schema requirements

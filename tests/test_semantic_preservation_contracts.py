@@ -136,16 +136,24 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
 
     def test_fixture_uses_one_owner_for_duplicate_literal_guards(self) -> None:
         cases = self.load_fixture()["cases"]
+        guard_fields = (
+            "must_not_introduce",
+            "forbidden_patterns",
+            "prohibited_verification_claims",
+        )
 
         overlaps = []
         for case in cases:
-            must_not_introduce = set(case.get("must_not_introduce", []))
-            for field_name in (
-                "forbidden_patterns",
-                "prohibited_verification_claims",
-            ):
-                for value in must_not_introduce.intersection(case.get(field_name, [])):
-                    overlaps.append(f"{case['id']}: {field_name}: {value}")
+            for index, field_name in enumerate(guard_fields):
+                field_values = set(case.get(field_name, []))
+                for other_field_name in guard_fields[index + 1 :]:
+                    duplicates = field_values.intersection(
+                        case.get(other_field_name, [])
+                    )
+                    for value in duplicates:
+                        overlaps.append(
+                            f"{case['id']}: {field_name}/{other_field_name}: {value}"
+                        )
 
         self.assertEqual([], overlaps)
 
@@ -1661,6 +1669,27 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         self.assertIn("required_source_limit_fragments", messages)
         self.assertIn("required_access_level", messages)
         self.assertIn("triage_only_warning", messages)
+        self.assertIn("prohibited_verification_claims", messages)
+
+    def test_checker_accepts_unverified_synthesis_but_rejects_verified_synthesis(self) -> None:
+        case = self.fixture_case("reading_title_only_access_002")
+        gold_output = str(case["gold_output"])
+
+        self.assertEqual(
+            [],
+            self.failures_for(
+                f"{gold_output}\nThis remains an unverified synthesis.",
+                case,
+            ),
+        )
+
+        messages = "\n".join(
+            self.failures_for(
+                f"{gold_output}\nThis is a verified synthesis.",
+                case,
+            )
+        )
+
         self.assertIn("prohibited_verification_claims", messages)
 
     def test_checker_rejects_requested_review_risk_regressions(self) -> None:
