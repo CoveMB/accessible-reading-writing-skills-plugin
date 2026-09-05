@@ -698,6 +698,55 @@ class SharedDocumentContractTests(unittest.TestCase):
             missing_contract_names(shared_document_text(), SHARED_DOCUMENT_CONTRACTS),
         )
 
+    def test_routing_matrix_delegates_suggestion_policy_to_one_owner(self) -> None:
+        text = read_text(DOCS_ROOT / "ROUTING_MATRIX.md")
+        normalized = normalized_text(text)
+
+        retired_fragments = (
+            "## Suggested next step gates",
+            "### Spoken material hides decisions, claims, questions, or tasks",
+            "### Dense material or document volume blocks action",
+            "### Existing prose has spelling, grammar, punctuation, or sentence-boundary friction",
+            "### Mixed bottlenecks block the next useful action",
+            "### No unresolved accessibility risk remains",
+            "Allowed next skill:",
+            "Blocked early suggestion:",
+        )
+        for fragment in retired_fragments:
+            with self.subTest(retired_fragment=fragment):
+                self.assertNotIn(fragment, text)
+
+        owner_link = "[Auto-selection guardrails](AUTO_SELECTION_GUARDRAILS.md)"
+        self.assertEqual(1, text.count(owner_link))
+        self.assertIn(
+            "apply them after selecting the primary route above",
+            normalized,
+        )
+
+        primary_routes = (
+            (
+                "### Voice, dictation, or transcript first",
+                "Route: `accessibility-dictation-notes`.",
+            ),
+            (
+                "### Reading volume first",
+                "Route: `accessibility-reading-load-reducer`.",
+            ),
+            (
+                "### Existing prose repair first",
+                "Route: `accessibility-prose-repair`.",
+            ),
+            (
+                "### Mixed or unclear bottleneck",
+                "Route: `accessibility-low-load-companion`.",
+            ),
+        )
+        self.assertIn("## Primary routes", text)
+        for heading, route in primary_routes:
+            with self.subTest(primary_route=heading):
+                self.assertIn(heading, text)
+                self.assertIn(route, text)
+
     def test_scan_docs_do_not_use_wide_markdown_tables(self) -> None:
         docs_to_check = (
             DOCS_ROOT / "SKILL_INDEX.md",
