@@ -134,6 +134,21 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
                 self.assertIn(case_id, cases)
                 self.assertTrue(risk_types <= set(cases[case_id]["risk_type"]))
 
+    def test_fixture_uses_one_owner_for_duplicate_literal_guards(self) -> None:
+        cases = self.load_fixture()["cases"]
+
+        overlaps = []
+        for case in cases:
+            must_not_introduce = set(case.get("must_not_introduce", []))
+            for field_name in (
+                "forbidden_patterns",
+                "prohibited_verification_claims",
+            ):
+                for value in must_not_introduce.intersection(case.get(field_name, [])):
+                    overlaps.append(f"{case['id']}: {field_name}: {value}")
+
+        self.assertEqual([], overlaps)
+
 
 class SemanticPreservationSchemaTests(unittest.TestCase):
     def test_schema_rejects_duplicate_and_unstable_ids(self) -> None:
@@ -1335,6 +1350,26 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         self.assertEqual(
             [],
             self.failures_for(str(prohibited_case["gold_output"]), prohibited_case),
+        )
+
+    def test_checker_uses_token_boundaries_for_introduced_terms(self) -> None:
+        case = valid_case(
+            must_not_introduce=["confirmed"],
+            forbidden_patterns=[],
+        )
+        gold_output = str(case["gold_output"])
+
+        self.assertEqual(
+            [],
+            self.failures_for(gold_output + "\nStatus remains unconfirmed.", case),
+        )
+
+        messages = "\n".join(
+            self.failures_for(gold_output + "\nStatus is confirmed.", case)
+        )
+        self.assertIn(
+            "must_not_introduce: expected term absent: confirmed",
+            messages,
         )
 
     def test_checker_rejects_reversed_source_limit_polarity(self) -> None:
