@@ -9,4 +9,5 @@ fi
 
 export PYTHONDONTWRITEBYTECODE=1
 
-python3 scripts/run_package_checks.py --scope full
+python3 scripts/validate_plugin.py .
+python3 -m unittest discover -s tests
