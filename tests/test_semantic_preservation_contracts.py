@@ -1412,6 +1412,37 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
 
         self.assertIn("privacy_claim_patterns", "\n".join(failures))
 
+        privacy_question_output = (
+            "Ask Morgan for permission before you may share "
+            "the confidential HR note in the team update."
+        )
+        self.assertEqual(
+            [],
+            semantic_preservation.invented_privacy_claim_pattern_failures(
+                str(case["id"]),
+                str(case["input"]),
+                privacy_question_output,
+            ),
+        )
+
+        high_stakes_failures = (
+            semantic_preservation.invented_high_stakes_claim_pattern_failures(
+                str(case["id"]),
+                "Refund eligibility is unclear.",
+                (
+                    "Ask Morgan for permission before the rule "
+                    "guarantees refund eligibility."
+                ),
+            )
+        )
+        self.assertIn(
+            (
+                "high_stakes_claim_patterns: expected no invented high-stakes "
+                "guarantee, eligibility, or authorization claim"
+            ),
+            "\n".join(high_stakes_failures),
+        )
+
     def test_checker_rejects_invented_consent_but_accepts_unconfirmed_consent(self) -> None:
         case = valid_case(
             id="dictation_consent_overclaim_001",
