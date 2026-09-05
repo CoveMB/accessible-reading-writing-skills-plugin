@@ -73,7 +73,6 @@ REQUIRED_AGENT_POLICY = {
     "private_payloads_external": "requires-explicit-consent",
     "artifact_sensitivity": "user-writing-and-notes",
 }
-AGENT_LOOKUP_POLICY_VALUES = {"conditional", "route-only", "none"}
 LOOKUP_PAYLOAD_BOUNDARIES = {
     "conditional": "public-identifiers-search-terms-and-nonsensitive-short-summaries",
     "route-only": "routing-targets-and-nonsensitive-summary-only",
@@ -102,27 +101,6 @@ def agent_policy_fields(skill_name: str = "") -> dict[str, Any]:
         "external_lookup_allowed": lookup_policy,
         "allowed_external_payloads": LOOKUP_PAYLOAD_BOUNDARIES[lookup_policy],
     }
-
-
-def yaml_policy_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return str(value).lower()
-    return f'"{value}"'
-
-
-def agent_policy_yaml_lines(
-    skill_name: str = "",
-    *,
-    allow_implicit_invocation: bool = True,
-) -> list[str]:
-    return [
-        "policy:",
-        f"  allow_implicit_invocation: {str(allow_implicit_invocation).lower()}",
-        *(
-            f"  {field_name}: {yaml_policy_value(value)}"
-            for field_name, value in agent_policy_fields(skill_name).items()
-        ),
-    ]
 
 
 def load_json_object(path: Path) -> dict[str, Any]:
@@ -215,20 +193,8 @@ def significant_description_terms(description: str) -> set[str]:
     }
 
 
-def plugin_name(root: Path) -> str:
-    return str(load_plugin_manifest(root).get("name", ""))
-
-
 def plugin_version(root: Path) -> str:
     return str(load_plugin_manifest(root).get("version", ""))
-
-
-def generated_file_patterns() -> list[str]:
-    return [
-        *sorted(EXCLUDED_DIRECTORIES),
-        *sorted(EXCLUDED_FILE_NAMES),
-        *(f"*{suffix}" for suffix in sorted(EXCLUDED_SUFFIXES)),
-    ]
 
 
 def is_generated_path(relative_path: Path) -> bool:
