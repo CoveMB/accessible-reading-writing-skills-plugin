@@ -43,7 +43,11 @@ Use `accessibility-low-load-companion` when reading load is mixed with dictation
 
 ## Source basis and limits
 
-Use `docs/SOURCE_LIMITS.md` for verification and source-access rules. Keep source access level, what can be verified, what remains uncertain, and user verification needs visible when facts or decisions depend on the material.
+Apply `docs/SOURCE_LIMITS.md` whenever source access, factual or verification
+claims, privacy or consent, external tools or sharing, currentness or source
+status, or high-stakes reliance is involved. Keep source access level, what can
+be verified, what remains uncertain, and user verification needs visible when
+facts or decisions depend on the material.
 
 If only titles, snippets, metadata, or partial excerpts are available, mark triage and skip risk as provisional.
 
@@ -59,17 +63,17 @@ Do not upgrade causal or statistical claims from thin notes. Causal and statisti
 
 Use compact output by default for low-risk reading triage, time-boxed triage, or a fast skim/read/skip decision. Compact output should use short chunks, stable labels, one source-basis line, one triage table, uncertainty and ambiguity only if access or meaning could change the decision, privacy or verification limits when relevant, and one useful next action only when it reduces friction.
 
-## Files/folders it may read
+## Operational boundaries
 
-- Shared operational boundary doc: `docs/SKILL_OPERATIONAL_BOUNDARIES.md`.
-- Shared policy docs: `docs/SOURCE_LIMITS.md`, `docs/AUTO_SELECTION_GUARDRAILS.md`, `docs/ROUTING_MATRIX.md`, and `docs/SKILL_INDEX.md`.
-- User-provided documents, excerpts, search results, bibliographies, drafts, notes, tasks, or constraints explicitly named in the request.
-
-## Files/folders it may write
-
-- None by default.
-- May create or update user-requested reading triage tables, reading plans, source-priority notes, or follow-up task lists in the user-designated workspace.
-- Must not overwrite source files, notes, bibliography databases, drafts, or private files unless the user explicitly asks.
+- Apply `docs/SKILL_OPERATIONAL_BOUNDARIES.md`, `docs/SOURCE_LIMITS.md`,
+  `docs/AUTO_SELECTION_GUARDRAILS.md`, and `docs/ROUTING_MATRIX.md`.
+- File boundaries — **read:** only user-provided documents, excerpts, search
+  results, bibliographies, drafts, notes, tasks, or constraints explicitly named
+  in the request; **write:** none by default, except requested reading triage
+  tables, reading plans, source-priority notes, or follow-up task lists in the
+  user-designated workspace; **protect:** do not overwrite source files, notes,
+  bibliography databases, drafts, or private files unless the user explicitly
+  asks.
 
 ## What it must not do
 

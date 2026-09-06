@@ -43,7 +43,9 @@ Use this instead of `accessibility-dictation-notes` when the input is already pr
 
 ## Source basis and limits
 
-Use `docs/SOURCE_LIMITS.md` for verification and source-access rules when the prose includes factual claims, citations, current facts, external-sharing stakes, legal/medical/financial details, or source support.
+Apply `docs/SOURCE_LIMITS.md` whenever source access, factual or verification
+claims, privacy or consent, external tools or sharing, currentness or source
+status, or high-stakes reliance is involved.
 
 Treat spelling and grammar cleanup as surface repair. If a correction could change meaning, keep the original wording visible and mark the ambiguity.
 
@@ -53,17 +55,16 @@ Use compact output by default for low-risk prose repair, minimal correction, or 
 
 Compact repair must keep caveats that affect claim strength, consent, responsibility, obligations, AI involvement, source support, currentness, venue policy, publication or release status, and privacy. Shorter output must not make an uncertain or unsupported claim look settled.
 
-## Files/folders it may read
+## Operational boundaries
 
-- Shared operational boundary doc: `docs/SKILL_OPERATIONAL_BOUNDARIES.md`.
-- Shared policy docs: `docs/SOURCE_LIMITS.md`, `docs/AUTO_SELECTION_GUARDRAILS.md`, `docs/ROUTING_MATRIX.md`, and `docs/SKILL_INDEX.md`.
-- User-provided passages, drafts, documents, style constraints, citation notes, or artifacts explicitly named in the request.
-
-## Files/folders it may write
-
-- None by default.
-- May create or update user-requested revised passages, correction notes, or edit logs in the user-designated workspace.
-- Must not overwrite original manuscripts, notes, drafts, source files, or private files unless the user explicitly asks.
+- Apply `docs/SKILL_OPERATIONAL_BOUNDARIES.md`, `docs/SOURCE_LIMITS.md`,
+  `docs/AUTO_SELECTION_GUARDRAILS.md`, and `docs/ROUTING_MATRIX.md`.
+- File boundaries — **read:** only user-provided passages, drafts, documents,
+  style constraints, citation notes, or artifacts explicitly named in the
+  request; **write:** none by default, except requested revised passages,
+  correction notes, or edit logs in the user-designated workspace; **protect:**
+  do not overwrite original manuscripts, notes, drafts, source files, or private
+  files unless the user explicitly asks.
 
 ## What it must not do
 
