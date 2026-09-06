@@ -347,10 +347,15 @@ def validate_skill_dir(
         errors.append(f"{skill_name}: missing description")
     if len(description) > 1024:
         errors.append(f"{skill_name}: description exceeds 1024 characters")
-    metadata_version = nested_string(nested_mapping(frontmatter, "metadata"), "version")
-    if metadata_version and expected_version and metadata_version != expected_version:
+    metadata = nested_mapping(frontmatter, "metadata")
+    raw_metadata_version = metadata.get("version")
+    if raw_metadata_version is None or raw_metadata_version == "":
+        errors.append(f"{skill_name}: missing metadata.version")
+    elif not isinstance(raw_metadata_version, str):
+        errors.append(f"{skill_name}: metadata.version must be a string")
+    elif expected_version and raw_metadata_version != expected_version:
         errors.append(
-            f"{skill_name}: metadata.version {metadata_version!r} must match plugin version "
+            f"{skill_name}: metadata.version {raw_metadata_version!r} must match plugin version "
             f"{expected_version!r}"
         )
     if name != skill_name:

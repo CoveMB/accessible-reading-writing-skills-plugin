@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -26,18 +26,116 @@ import validate_plugin
 UNIT_TEST_CHECK = ("-m", "unittest", "discover", "-s", "tests")
 SKILL_VALIDATION_CHECK = ("scripts/validate_plugin.py", ".")
 CI_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "skill-tests.yml"
-FULL_PACKAGE_CHECK_COMMAND = "python3 scripts/run_package_checks.py --scope full"
 
 
-class PackageCheckTests(unittest.TestCase):
-    def test_full_scope_runs_skill_validation(self) -> None:
-        self.assertIn(
-            SKILL_VALIDATION_CHECK,
-            run_package_checks.checks_for_scope("full"),
+class PackageCheckCompatibilityTests(unittest.TestCase):
+    def command_result(
+        self,
+        returncode: int = 0,
+        stdout: str = "",
+        stderr: str = "",
+    ) -> mock.Mock:
+        return mock.Mock(
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
         )
 
-    def test_full_scope_runs_unit_tests(self) -> None:
-        self.assertIn(UNIT_TEST_CHECK, run_package_checks.checks_for_scope("full"))
+    def test_full_scope_runs_validation_then_unit_tests_at_explicit_root(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            side_effect=[self.command_result(), self.command_result()],
+        ) as run:
+            status = run_package_checks.main(
+                ["--scope", "full", "--root", str(ROOT)]
+            )
+
+        self.assertEqual(0, status)
+        self.assertEqual(
+            [
+                [sys.executable, "scripts/validate_plugin.py", "."],
+                [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+            ],
+            [call.args[0] for call in run.call_args_list],
+        )
+        self.assertEqual(
+            [ROOT.resolve(), ROOT.resolve()],
+            [call.kwargs["cwd"] for call in run.call_args_list],
+        )
+
+    def test_validation_failure_stops_before_unit_tests(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            return_value=self.command_result(returncode=7),
+        ) as run:
+            status = run_package_checks.main(["--scope", "full"])
+
+        self.assertEqual(7, status)
+        run.assert_called_once()
+
+    def test_unit_test_failure_is_returned_after_successful_validation(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            side_effect=[
+                self.command_result(returncode=0),
+                self.command_result(returncode=9),
+            ],
+        ) as run:
+            status = run_package_checks.main(["--scope", "full"])
+
+        self.assertEqual(9, status)
+        self.assertEqual(2, run.call_count)
+
+    def test_install_scope_uses_default_root_and_skips_unit_tests(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            return_value=self.command_result(),
+        ) as run:
+            status = run_package_checks.main(["--scope", "install"])
+
+        self.assertEqual(0, status)
+        run.assert_called_once()
+        self.assertEqual(
+            [sys.executable, "scripts/validate_plugin.py", "."],
+            run.call_args.args[0],
+        )
+        self.assertEqual(
+            run_package_checks.ROOT.resolve(),
+            run.call_args.kwargs["cwd"],
+        )
+
+    def test_invalid_scope_exits_with_argparse_status_two(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
+            run_package_checks.main(["--scope", "invalid"])
+
+        self.assertEqual(2, raised.exception.code)
+        self.assertIn("invalid choice", stderr.getvalue())
+
+    def test_child_output_channels_and_newline_normalization_are_preserved(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(
+                run_package_checks.subprocess,
+                "run",
+                return_value=self.command_result(
+                    stdout="child stdout",
+                    stderr="child stderr",
+                ),
+            ),
+            redirect_stdout(stdout),
+            redirect_stderr(stderr),
+        ):
+            status = run_package_checks.main(["--scope", "install"])
+
+        self.assertEqual(0, status)
+        self.assertEqual("child stdout\n", stdout.getvalue())
+        self.assertEqual("child stderr\n", stderr.getvalue())
 
 
 class ContinuousIntegrationTests(unittest.TestCase):
@@ -45,7 +143,11 @@ class ContinuousIntegrationTests(unittest.TestCase):
         self.assertTrue(CI_WORKFLOW_PATH.exists())
         workflow_text = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
 
-        self.assertIn(FULL_PACKAGE_CHECK_COMMAND, workflow_text)
+        self.assertIn("run: ./validate.sh", workflow_text)
+        self.assertNotIn(
+            "python3 scripts/run_package_checks.py --scope full",
+            workflow_text,
+        )
 
 
 class PackageArchiveSafetyTests(unittest.TestCase):
@@ -121,48 +223,10 @@ class PackageArchiveSafetyTests(unittest.TestCase):
 
             packaged_root = extract_root / ROOT.name
             with redirect_stdout(io.StringIO()):
-                self.assertEqual(0, run_package_checks.run_checks("install", packaged_root))
+                self.assertEqual(0, package_plugin.run_validation(packaged_root))
 
 
 class MarketplaceContractTests(unittest.TestCase):
-    def test_release_versions_match(self) -> None:
-        manifest = plugin_utils.load_plugin_manifest(ROOT)
-        version = manifest["version"]
-
-        self.assertEqual("1.0.0", version)
-        readme_lines = {
-            line.strip()
-            for line in (ROOT / "README.md").read_text(encoding="utf-8").splitlines()
-        }
-        changelog_lines = {
-            line.strip()
-            for line in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()
-        }
-        self.assertIn(f"Version: {version}", readme_lines)
-        self.assertIn(f"## {version}", changelog_lines)
-        for skill_path in sorted((ROOT / "skills").glob("*/SKILL.md")):
-            frontmatter = plugin_utils.parse_markdown_frontmatter(
-                skill_path.read_text(encoding="utf-8")
-            )
-            self.assertEqual(version, frontmatter["metadata"]["version"])
-
-    def test_repository_marketplace_matches_manifest(self) -> None:
-        manifest = plugin_utils.load_plugin_manifest(ROOT)
-        marketplace = plugin_utils.load_json_object(
-            ROOT / ".agents" / "plugins" / "marketplace.json"
-        )
-
-        self.assertEqual("accessible-reading-writing-local", marketplace["name"])
-        self.assertEqual(1, len(marketplace["plugins"]))
-        entry = marketplace["plugins"][0]
-        self.assertEqual(manifest["name"], entry["name"])
-        self.assertEqual({"source": "local", "path": "./"}, entry["source"])
-        self.assertEqual(
-            {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
-            entry["policy"],
-        )
-        self.assertEqual("Productivity", entry["category"])
-
     def test_public_instructions_do_not_directly_mutate_codex_cache(self) -> None:
         command_pattern = re.compile(
             r"^\s*(?:cp|del|ln|mkdir|mv|rm|rmdir|Remove-Item)\b.*"
@@ -207,40 +271,204 @@ class ValidatorTests(unittest.TestCase):
             self.assertIn("README.md must report Version: 1.0.0", errors)
             self.assertIn("CHANGELOG.md must include a 1.0.0 release heading", errors)
 
-    def test_marketplace_plugin_name_must_match_manifest(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+    def test_skill_metadata_version_states(self) -> None:
+        cases = (
+            (
+                "valid",
+                ("metadata:", '  version: "1.0.0"'),
+                None,
+            ),
+            (
+                "missing",
+                (),
+                "example-skill: missing metadata.version",
+            ),
+            (
+                "empty",
+                ("metadata:", '  version: ""'),
+                "example-skill: missing metadata.version",
+            ),
+            (
+                "non-string",
+                ("metadata:", "  version: true"),
+                "example-skill: metadata.version must be a string",
+            ),
+            (
+                "mismatch",
+                ("metadata:", '  version: "2.0.0"'),
+                (
+                    "example-skill: metadata.version '2.0.0' "
+                    "must match plugin version '1.0.0'"
+                ),
+            ),
+        )
+
+        for case_name, metadata_lines, expected_error in cases:
+            with self.subTest(case=case_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                skill_dir = root / "skills" / "example-skill"
+                skill_dir.mkdir(parents=True)
+                (skill_dir / "README.md").write_text(
+                    "# example-skill\n",
+                    encoding="utf-8",
+                )
+                (skill_dir / "SKILL.md").write_text(
+                    "\n".join(
+                        (
+                            "---",
+                            "name: example-skill",
+                            "description: Use when example material needs validation.",
+                            *metadata_lines,
+                            "---",
+                        )
+                    ),
+                    encoding="utf-8",
+                )
+
+                _, _, errors = validate_plugin.validate_skill_dir(
+                    root,
+                    skill_dir,
+                    seen_names=set(),
+                    expected_version="1.0.0",
+                )
+
+                metadata_errors = [
+                    error for error in errors if "metadata.version" in error
+                ]
+                if expected_error is None:
+                    self.assertEqual([], metadata_errors)
+                else:
+                    self.assertEqual([expected_error], metadata_errors)
+
+    def test_marketplace_validator_states(self) -> None:
+        valid_marketplace = {
+            "name": "accessible-reading-writing-local",
+            "interface": {
+                "displayName": "Accessible Reading and Writing Local",
+            },
+            "plugins": [
+                {
+                    "name": "expected-plugin",
+                    "source": {"source": "local", "path": "./"},
+                    "policy": {
+                        "installation": "AVAILABLE",
+                        "authentication": "ON_INSTALL",
+                    },
+                    "category": "Productivity",
+                }
+            ],
+        }
+        cases = (
+            ("valid", None, None, None),
+            (
+                "marketplace-name",
+                ("name",),
+                "wrong-marketplace",
+                "marketplace name must be 'accessible-reading-writing-local'",
+            ),
+            (
+                "display-name",
+                ("interface", "displayName"),
+                "Wrong display name",
+                (
+                    "marketplace displayName must be "
+                    "'Accessible Reading and Writing Local'"
+                ),
+            ),
+            (
+                "entry-cardinality",
+                ("plugins",),
+                [],
+                "marketplace must contain exactly one plugin entry",
+            ),
+            (
+                "multiple-plugin-entries",
+                ("plugins",),
+                valid_marketplace["plugins"] * 2,
+                "marketplace must contain exactly one plugin entry",
+            ),
+            (
+                "plugin-name",
+                ("plugins", 0, "name"),
+                "wrong-plugin",
+                "marketplace plugin name must match manifest name 'expected-plugin'",
+            ),
+            (
+                "source",
+                ("plugins", 0, "source"),
+                {"source": "local", "path": "./wrong"},
+                "marketplace source must be the repository root: local ./",
+            ),
+            (
+                "non-local-source",
+                ("plugins", 0, "source"),
+                {"source": "git", "path": "./"},
+                "marketplace source must be the repository root: local ./",
+            ),
+            (
+                "policy",
+                ("plugins", 0, "policy"),
+                {"installation": "AVAILABLE", "authentication": "NONE"},
+                "marketplace policy must use AVAILABLE and ON_INSTALL",
+            ),
+            (
+                "non-available-installation",
+                ("plugins", 0, "policy"),
+                {"installation": "INSTALLED", "authentication": "ON_INSTALL"},
+                "marketplace policy must use AVAILABLE and ON_INSTALL",
+            ),
+            (
+                "category",
+                ("plugins", 0, "category"),
+                "Other",
+                "marketplace category must be Productivity",
+            ),
+        )
+
+        for case_name, mutation_path, value, expected_error in cases:
+            with self.subTest(case=case_name), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                marketplace_path = root / ".agents" / "plugins" / "marketplace.json"
+                marketplace_path.parent.mkdir(parents=True)
+
+                payload = json.loads(json.dumps(valid_marketplace))
+                if mutation_path is not None:
+                    target = payload
+                    for key in mutation_path[:-1]:
+                        target = target[key]
+                    target[mutation_path[-1]] = value
+
+                marketplace_path.write_text(
+                    json.dumps(payload),
+                    encoding="utf-8",
+                )
+                errors = validate_plugin.validate_marketplace(
+                    root,
+                    {"name": "expected-plugin"},
+                )
+
+                if expected_error is None:
+                    self.assertEqual([], errors)
+                else:
+                    self.assertEqual([expected_error], errors)
+
+    def test_marketplace_validator_rejects_malformed_json(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
             marketplace_path = root / ".agents" / "plugins" / "marketplace.json"
             marketplace_path.parent.mkdir(parents=True)
-            marketplace_path.write_text(
-                json.dumps(
-                    {
-                        "name": "accessible-reading-writing-local",
-                        "interface": {
-                            "displayName": "Accessible Reading and Writing Local"
-                        },
-                        "plugins": [
-                            {
-                                "name": "wrong-plugin",
-                                "source": {"source": "local", "path": "./"},
-                                "policy": {
-                                    "installation": "AVAILABLE",
-                                    "authentication": "ON_INSTALL",
-                                },
-                                "category": "Productivity",
-                            }
-                        ],
-                    }
-                ),
-                encoding="utf-8",
-            )
+            marketplace_path.write_text("{", encoding="utf-8")
+
             errors = validate_plugin.validate_marketplace(
                 root,
                 {"name": "expected-plugin"},
             )
 
-            self.assertIn(
-                "marketplace plugin name must match manifest name 'expected-plugin'",
+            self.assertEqual(
+                [
+                    f"{marketplace_path}: malformed JSON at line 1, column 2: "
+                    "Expecting property name enclosed in double quotes"
+                ],
                 errors,
             )
 

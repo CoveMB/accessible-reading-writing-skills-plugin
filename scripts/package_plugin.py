@@ -12,21 +12,13 @@ from tempfile import TemporaryDirectory
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from plugin_utils import (
     copy_package_tree,
-    package_files as included_package_files,
+    package_files,
     plugin_version,
 )
 
 
 VALIDATION_SCRIPT = Path(__file__).resolve().parent / "validate_plugin.py"
 DEFAULT_PACKAGE_STEM = "accessible-reading-writing-plugin"
-
-
-def package_output_files(root: Path, output_path: Path, temporary_output_path: Path) -> list[Path]:
-    return [
-        path
-        for path in included_package_files(root)
-        if path.resolve() not in {output_path.resolve(), temporary_output_path.resolve()}
-    ]
 
 
 def write_package(root: Path, output_path: Path) -> None:
@@ -45,11 +37,7 @@ def write_package(root: Path, output_path: Path) -> None:
                 "w",
                 compression=zipfile.ZIP_DEFLATED,
             ) as archive:
-                for path in package_output_files(
-                    staged_root,
-                    output_path,
-                    temporary_output_path,
-                ):
+                for path in package_files(staged_root):
                     archive.write(
                         path,
                         root.name + "/" + str(path.relative_to(staged_root)),

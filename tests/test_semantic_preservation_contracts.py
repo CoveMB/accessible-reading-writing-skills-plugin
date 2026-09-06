@@ -165,6 +165,20 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
 
         self.assertEqual([], overlaps)
 
+        refund_case = next(
+            case
+            for case in cases
+            if case["id"] == "low_load_yes_no_refund_006"
+        )
+        self.assertNotIn(
+            "policy confirms",
+            refund_case.get("must_not_introduce", []),
+        )
+        self.assertIn(
+            "policy confirms",
+            refund_case.get("prohibited_verification_claims", []),
+        )
+
 
 class SemanticPreservationSchemaTests(unittest.TestCase):
     def test_schema_rejects_duplicate_and_unstable_ids(self) -> None:

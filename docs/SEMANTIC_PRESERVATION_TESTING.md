@@ -21,13 +21,21 @@ python3 -m unittest discover -s tests
 Run the full package check used by CI:
 
 ```bash
+./validate.sh
+```
+
+The full check runs plugin validation and unittest discovery. CI uses this
+command from `.github/workflows/skill-tests.yml`, so semantic tests do not need
+a separate CI command.
+
+Existing automation can continue to use the compatibility command:
+
+```bash
 python3 scripts/run_package_checks.py --scope full
 ```
 
-The full check runs plugin validation and unittest discovery. `./validate.sh`
-is a shell wrapper for the same full package check. CI uses the same full
-package check from `.github/workflows/skill-tests.yml`, so semantic tests do
-not need a separate CI command.
+Removing that command requires a separately authorized, versioned
+compatibility change.
 
 To evaluate an outputs file against the same fixture cases:
 
@@ -134,7 +142,13 @@ legal, medical, financial, workplace, research, or citation decisions.
 Fixture cases are stored in
 `tests/fixtures/semantic_preservation_cases.json`.
 
-Every case requires `id`, `skill`, `risk_type`, `input`, and `gold_output`.
+Every case requires:
+
+- `id`: stable lowercase case id ending in a three-digit number.
+- `skill`: skill folder the case belongs to.
+- `risk_type`: list of risk labels for the deformation being guarded.
+- `input`: source text or user request fragment.
+- `gold_output`: reference output that must satisfy the invariants.
 
 Optional executable invariants are `must_preserve_literals`,
 `must_preserve_uncertainty`, `must_preserve_uncertainty_scope`,
@@ -261,8 +275,8 @@ not pass merely because some unrelated `not` remains visible.
 `must_not_introduce` blocks high-risk words, claims, commitments, advice, or
 facts that were not present in the input. It is strict: if the term appears, the
 check fails even when the surrounding sentence negates or limits the term. Use
-it for concrete invented claims such as `refund approved`, `policy confirms`,
-`you should stop meds`, or `safe to share`.
+it for concrete invented claims such as `refund approved`, `you should stop
+meds`, or `safe to share`.
 
 `must_not_introduce_unless_limited` blocks the same kind of risk only when the
 term is introduced as an unsupported claim. It allows the term when the nearby
@@ -313,7 +327,8 @@ unverified source support applies`.
 `required_access_level` requires a specific access-level phrase to appear.
 
 `prohibited_verification_claims` blocks case-specific unsupported claims that
-the source, full text, policy, article, or citation verifies something.
+the source, full text, policy, article, or citation verifies something, such as
+`policy confirms`.
 
 `requires_triage_only_warning` requires visible `TRIAGE ONLY` wording when an
 output could otherwise be mistaken for verified synthesis or advice.

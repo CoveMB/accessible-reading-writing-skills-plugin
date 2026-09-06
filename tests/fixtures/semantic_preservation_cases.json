@@ -1529,10 +1529,12 @@
       ],
       "must_not_introduce": [
         "tell Dana yes",
-        "policy confirms",
         "refund authorized",
         "reimbursement authorized",
         "approved refund"
+      ],
+      "prohibited_verification_claims": [
+        "policy confirms"
       ],
       "forbidden_patterns": [
         "refund (?:is |has been )?authorized",
