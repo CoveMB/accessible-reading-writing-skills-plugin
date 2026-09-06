@@ -38,6 +38,14 @@ def valid_case(**overrides: object) -> dict[str, object]:
     return case
 
 
+def valid_payload(*cases: dict[str, object]) -> dict[str, object]:
+    return {
+        "version": 1,
+        "purpose": "Regression guard, not a proof.",
+        "cases": list(cases),
+    }
+
+
 def ambiguous_name_case(**overrides: object) -> dict[str, object]:
     case = valid_case(
         input="Send it to Anne or Ann. I am not sure which name.",
@@ -174,14 +182,10 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
 
 class SemanticPreservationSchemaTests(unittest.TestCase):
     def test_schema_rejects_duplicate_and_unstable_ids(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(id="bad id"),
-                valid_case(id="bad id"),
-            ],
-        }
+        payload = valid_payload(
+            valid_case(id="bad id"),
+            valid_case(id="bad id"),
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
         messages = "\n".join(errors)
@@ -190,11 +194,7 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         self.assertIn("id is duplicated", messages)
 
     def test_schema_rejects_unknown_skill_folder(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [valid_case(skill="missing-skill")],
-        }
+        payload = valid_payload(valid_case(skill="missing-skill"))
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -204,11 +204,7 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_rejects_invalid_allowed_transform_shape(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [valid_case(allowed_transforms={"cannot": "can't"})],
-        }
+        payload = valid_payload(valid_case(allowed_transforms={"cannot": "can't"}))
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -218,45 +214,37 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_accepts_reading_load_source_limit_fields(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    skill="accessibility-reading-load-reducer",
-                    required_source_basis_fragments=[
-                        "Source basis",
-                        "title/citation/metadata only",
-                    ],
-                    required_source_limit_fragments=[
-                        "do not treat this as verified source support",
-                    ],
-                    required_access_level="title/citation/metadata only",
-                    prohibited_verification_claims=["the article proves"],
-                    requires_triage_only_warning=True,
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                skill="accessibility-reading-load-reducer",
+                required_source_basis_fragments=[
+                    "Source basis",
+                    "title/citation/metadata only",
+                ],
+                required_source_limit_fragments=[
+                    "do not treat this as verified source support",
+                ],
+                required_access_level="title/citation/metadata only",
+                prohibited_verification_claims=["the article proves"],
+                requires_triage_only_warning=True,
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
         self.assertEqual([], errors)
 
     def test_schema_requires_source_limit_fields_for_reading_load_cases(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    id="reading_title_only_access_001",
-                    skill="accessibility-reading-load-reducer",
-                    input="Article title only: 'Attachment and burnout'.",
-                    gold_output="Attachment and burnout might be relevant.",
-                    risk_type=["title_only_access", "source_overclaim"],
-                    required_ambiguity_fragments=[],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                id="reading_title_only_access_001",
+                skill="accessibility-reading-load-reducer",
+                input="Article title only: 'Attachment and burnout'.",
+                gold_output="Attachment and burnout might be relevant.",
+                risk_type=["title_only_access", "source_overclaim"],
+                required_ambiguity_fragments=[],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
         messages = "\n".join(errors)
@@ -279,51 +267,39 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_accepts_uncertainty_scope_field(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    must_preserve_uncertainty_scope=[
-                        "might meet Lee",
-                        "do not promise",
-                    ],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                must_preserve_uncertainty_scope=[
+                    "might meet Lee",
+                    "do not promise",
+                ],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
         self.assertEqual([], errors)
 
     def test_schema_accepts_limited_must_not_introduce_field(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    must_not_introduce_unless_limited=[
-                        "legal advice",
-                        "verified source support",
-                    ],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                must_not_introduce_unless_limited=[
+                    "legal advice",
+                    "verified source support",
+                ],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
         self.assertEqual([], errors)
 
     def test_schema_rejects_invalid_limited_must_not_introduce_field(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    must_not_introduce_unless_limited="legal advice",
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                must_not_introduce_unless_limited="legal advice",
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -333,16 +309,12 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_requires_scoped_negation_for_negation_risk_cases(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    risk_type=["privacy_boundary", "negation_scope_loss"],
-                    must_preserve_negation_scope=[],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                risk_type=["privacy_boundary", "negation_scope_loss"],
+                must_preserve_negation_scope=[],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -352,20 +324,16 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_rejects_weak_uncertainty_risk_without_scoped_or_claim_guard(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    id="prose_uncertainty_weak_001",
-                    risk_type=["uncertainty_erasure"],
-                    must_preserve_uncertainty=["might"],
-                    must_preserve_uncertainty_scope=[],
-                    must_not_introduce=[],
-                    forbidden_patterns=[],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                id="prose_uncertainty_weak_001",
+                risk_type=["uncertainty_erasure"],
+                must_preserve_uncertainty=["might"],
+                must_preserve_uncertainty_scope=[],
+                must_not_introduce=[],
+                forbidden_patterns=[],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -375,24 +343,20 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_rejects_weak_commitment_risk_without_targeted_claim_guard(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    id="prose_commitment_weak_001",
-                    risk_type=["commitment_inflation"],
-                    input="I might attend if the appointment moves.",
-                    gold_output="I might attend if the appointment moves.",
-                    must_preserve_uncertainty=["might", "if"],
-                    must_preserve_uncertainty_scope=[
-                        "might attend if the appointment moves"
-                    ],
-                    must_not_introduce=["diagnosis"],
-                    forbidden_patterns=["diagnosis"],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                id="prose_commitment_weak_001",
+                risk_type=["commitment_inflation"],
+                input="I might attend if the appointment moves.",
+                gold_output="I might attend if the appointment moves.",
+                must_preserve_uncertainty=["might", "if"],
+                must_preserve_uncertainty_scope=[
+                    "might attend if the appointment moves"
+                ],
+                must_not_introduce=["diagnosis"],
+                forbidden_patterns=["diagnosis"],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -402,21 +366,17 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_rejects_weak_source_risk_without_source_or_verification_guard(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    id="prose_source_weak_001",
-                    risk_type=["source_overclaim"],
-                    input="Smith 2020 maybe says this, but I have not checked.",
-                    gold_output="Smith 2020 maybe says this, but I have not checked.",
-                    must_preserve_uncertainty=[],
-                    must_not_introduce=[],
-                    forbidden_patterns=[],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                id="prose_source_weak_001",
+                risk_type=["source_overclaim"],
+                input="Smith 2020 maybe says this, but I have not checked.",
+                gold_output="Smith 2020 maybe says this, but I have not checked.",
+                must_preserve_uncertainty=[],
+                must_not_introduce=[],
+                forbidden_patterns=[],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -426,21 +386,17 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_rejects_high_stakes_advice_without_targeted_guard(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    id="prose_high_stakes_weak_001",
-                    risk_type=["high_stakes_advice"],
-                    input="Eviction response note.",
-                    gold_output="Eviction response note.",
-                    must_preserve_uncertainty=[],
-                    must_not_introduce=[],
-                    forbidden_patterns=[],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                id="prose_high_stakes_weak_001",
+                risk_type=["high_stakes_advice"],
+                input="Eviction response note.",
+                gold_output="Eviction response note.",
+                must_preserve_uncertainty=[],
+                must_not_introduce=[],
+                forbidden_patterns=[],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
@@ -450,74 +406,66 @@ class SemanticPreservationSchemaTests(unittest.TestCase):
         )
 
     def test_schema_accepts_strong_risk_label_invariants(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    id="prose_strong_risk_001",
-                    risk_type=[
-                        "privacy_boundary",
-                        "uncertainty_erasure",
-                        "commitment_inflation",
-                        "source_overclaim",
-                        "medical_risk",
-                    ],
-                    input=(
-                        "I might ask about the medical article, but do not share my diagnosis. "
-                        "I am not promising to attend."
-                    ),
-                    gold_output=(
-                        "I might ask about the medical article, but do not share my diagnosis. "
-                        "I am not promising to attend.\n"
-                        "Review note: source support remains unverified and this is not medical advice."
-                    ),
-                    must_preserve_literals=["medical article", "diagnosis"],
-                    must_preserve_uncertainty=["might", "not promising"],
-                    must_preserve_uncertainty_scope=[
-                        "might ask about the medical article",
-                        "not promising to attend",
-                    ],
-                    must_preserve_negation_scope=[
-                        "do not share my diagnosis",
-                        "not promising to attend",
-                    ],
-                    must_not_introduce=[
-                        "I will attend",
-                        "promise to attend",
-                        "diagnosis can be shared",
-                        "doctor confirmed",
-                    ],
-                    required_source_limit_fragments=[
-                        "source support remains unverified"
-                    ],
-                    forbidden_patterns=[
-                        "\\bI will attend\\b",
-                        "diagnosis can be shared",
-                        "doctor confirmed",
-                    ],
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                id="prose_strong_risk_001",
+                risk_type=[
+                    "privacy_boundary",
+                    "uncertainty_erasure",
+                    "commitment_inflation",
+                    "source_overclaim",
+                    "medical_risk",
+                ],
+                input=(
+                    "I might ask about the medical article, but do not share my diagnosis. "
+                    "I am not promising to attend."
+                ),
+                gold_output=(
+                    "I might ask about the medical article, but do not share my diagnosis. "
+                    "I am not promising to attend.\n"
+                    "Review note: source support remains unverified and this is not medical advice."
+                ),
+                must_preserve_literals=["medical article", "diagnosis"],
+                must_preserve_uncertainty=["might", "not promising"],
+                must_preserve_uncertainty_scope=[
+                    "might ask about the medical article",
+                    "not promising to attend",
+                ],
+                must_preserve_negation_scope=[
+                    "do not share my diagnosis",
+                    "not promising to attend",
+                ],
+                must_not_introduce=[
+                    "I will attend",
+                    "promise to attend",
+                    "diagnosis can be shared",
+                    "doctor confirmed",
+                ],
+                required_source_limit_fragments=[
+                    "source support remains unverified"
+                ],
+                forbidden_patterns=[
+                    "\\bI will attend\\b",
+                    "diagnosis can be shared",
+                    "doctor confirmed",
+                ],
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
         self.assertEqual([], errors)
 
     def test_schema_rejects_invalid_reading_load_source_limit_fields(self) -> None:
-        payload = {
-            "version": 1,
-            "purpose": "Regression guard, not a proof.",
-            "cases": [
-                valid_case(
-                    required_source_basis_fragments="Source basis",
-                    required_source_limit_fragments="unverified",
-                    required_access_level=["title-only"],
-                    prohibited_verification_claims="verified",
-                    requires_triage_only_warning="yes",
-                )
-            ],
-        }
+        payload = valid_payload(
+            valid_case(
+                required_source_basis_fragments="Source basis",
+                required_source_limit_fragments="unverified",
+                required_access_level=["title-only"],
+                prohibited_verification_claims="verified",
+                requires_triage_only_warning="yes",
+            )
+        )
 
         errors = semantic_preservation.validate_cases_payload(payload, ROOT)
 
