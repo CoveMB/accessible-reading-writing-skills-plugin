@@ -261,8 +261,8 @@ not pass merely because some unrelated `not` remains visible.
 `must_not_introduce` blocks high-risk words, claims, commitments, advice, or
 facts that were not present in the input. It is strict: if the term appears, the
 check fails even when the surrounding sentence negates or limits the term. Use
-it for concrete invented claims such as `refund approved`, `policy confirms`,
-`you should stop meds`, or `safe to share`.
+it for concrete invented claims such as `refund approved`, `you should stop
+meds`, or `safe to share`.
 
 `must_not_introduce_unless_limited` blocks the same kind of risk only when the
 term is introduced as an unsupported claim. It allows the term when the nearby
@@ -313,7 +313,8 @@ unverified source support applies`.
 `required_access_level` requires a specific access-level phrase to appear.
 
 `prohibited_verification_claims` blocks case-specific unsupported claims that
-the source, full text, policy, article, or citation verifies something.
+the source, full text, policy, article, or citation verifies something, such as
+`policy confirms`.
 
 `requires_triage_only_warning` requires visible `TRIAGE ONLY` wording when an
 output could otherwise be mistaken for verified synthesis or advice.
