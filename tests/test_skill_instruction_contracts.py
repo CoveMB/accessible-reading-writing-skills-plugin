@@ -22,13 +22,11 @@ SHARED_DOC_REFERENCES = (
         DOCS_ROOT / "SKILL_OPERATIONAL_BOUNDARIES.md",
     ),
     ("docs/source_limits.md", DOCS_ROOT / "SOURCE_LIMITS.md"),
-)
-
-SHARED_DOC_PATHS = (
-    DOCS_ROOT / "SKILL_OPERATIONAL_BOUNDARIES.md",
-    DOCS_ROOT / "SOURCE_LIMITS.md",
-    DOCS_ROOT / "AUTO_SELECTION_GUARDRAILS.md",
-    DOCS_ROOT / "SKILL_INDEX.md",
+    (
+        "docs/auto_selection_guardrails.md",
+        DOCS_ROOT / "AUTO_SELECTION_GUARDRAILS.md",
+    ),
+    ("docs/routing_matrix.md", DOCS_ROOT / "ROUTING_MATRIX.md"),
 )
 
 TermGroup = tuple[str, ...]
@@ -84,284 +82,154 @@ def missing_contract_names(text: str, contracts: tuple[Contract, ...]) -> list[s
     ]
 
 
-def referenced_shared_text(skill_text: str) -> str:
-    referenced_paths = [
-        path
-        for reference, path in SHARED_DOC_REFERENCES
-        if reference in skill_text
-    ]
-    return "\n".join(read_normalized(path) for path in referenced_paths if path.exists())
-
-
-def full_skill_contract_text(skill_name: str) -> str:
-    skill_text = read_normalized(skill_path(skill_name))
-    return "\n".join([skill_text, referenced_shared_text(skill_text)])
-
-
-def shared_document_text() -> str:
-    return "\n".join(read_normalized(path) for path in SHARED_DOC_PATHS)
-
-
 # These tests are instruction guardrails only. They verify that required safety
 # contracts remain documented; they do not prove model behavior preserves meaning.
-SHARED_SKILL_CONTRACTS: tuple[Contract, ...] = (
-    (
-        "meaning preservation",
-        (
-            ("preserve", "meaning"),
-            ("meaning-preserving",),
-            ("without changing", "meaning"),
-        ),
-    ),
-    (
-        "ambiguity marked instead of guessed",
-        (
-            ("ambiguity", "instead of guessing"),
-            ("mark ambiguity", "guessing"),
-            ("ambiguous", "rather than silently"),
-        ),
-    ),
-    (
-        "no invented facts or unsupported claims",
-        (
-            ("do not add facts",),
-            ("do not invent", "facts"),
-            ("do not invent", "claims"),
-            ("unsupported", "claims"),
-        ),
-    ),
-    (
-        "uncertainty remains visible",
-        (
-            ("uncertainty", "visible"),
-            ("what remains uncertain",),
-            ("do not hide uncertainty",),
-        ),
-    ),
-    (
-        "qualifier and negation scope stays attached",
-        (
-            (
-                "qualifiers and negations",
-                "same subject",
-                "action",
-                "object",
-                "does not preserve",
-                "scope or polarity",
-            ),
-        ),
-    ),
-    (
-        "consent and permission are not inferred",
-        (
-            (
-                "do not infer consent or permission",
-                "access",
-                "prior sharing",
-                "silence",
-                "plan to ask",
-            ),
-        ),
-    ),
-    (
-        "cleanup does not create high-stakes instructions",
-        (
-            (
-                "legal, medical, or financial advice",
-                "attributed content",
-                "direct instruction",
-            ),
-            (
-                "cleaning, structuring, and triage",
-                "do not authorize",
-                "direct legal, medical, or financial instructions",
-            ),
-        ),
-    ),
-    (
-        "source and verification limits remain visible",
-        (
-            ("source basis and limits",),
-            ("source access level",),
-            ("verification", "limits"),
-            ("docs/source_limits.md",),
-        ),
-    ),
-    (
-        "source-contained instructions are treated as content",
-        (
-            ("source-contained", "instructions", "not", "follow"),
-            ("source material", "not operating instructions"),
-            ("untrusted", "source material", "instructions"),
-        ),
-    ),
-    (
-        "false premises are not smoothed into claims",
-        (
-            ("false premise", "strongest supportable"),
-            ("unsupported premise", "do not", "smooth"),
-            ("premise gap", "supportable"),
-        ),
-    ),
-    (
-        "compact output keeps decision-changing caveats",
-        (
-            ("compact", "decision-changing caveats"),
-            ("compact output", "must not remove", "caveats"),
-            ("compact output", "source", "privacy", "verification", "limits"),
-        ),
-    ),
-    (
-        "original material is not overwritten without explicit request",
-        (
-            ("must not overwrite", "explicit"),
-            ("overwrite", "without explicit user request"),
-            ("overwrite", "unless the user explicitly asks"),
-        ),
-    ),
-)
-
 SHARED_REFERENCE_CONTRACTS: tuple[Contract, ...] = tuple(
-    (
-        f"references {reference}",
-        ((reference,),),
-    )
+    (f"references {reference}", ((reference,),))
     for reference, _ in SHARED_DOC_REFERENCES
 )
 
-SHARED_DOCUMENT_CONTRACTS: tuple[Contract, ...] = (
-    (
-        "source access levels are classified",
+POLICY_OWNER_CONTRACTS: dict[Path, tuple[Contract, ...]] = {
+    DOCS_ROOT / "SKILL_OPERATIONAL_BOUNDARIES.md": (
         (
+            "meaning preservation",
+            (("preserve the user's meaning",), ("meaning must be preserved",)),
+        ),
+        (
+            "ambiguity marked instead of guessed",
+            (("mark ambiguity", "instead of guessing"),),
+        ),
+        (
+            "uncertainty remains visible",
+            (("uncertainty", "visible", "when they matter"),),
+        ),
+        (
+            "qualifier polarity and scope stay attached",
             (
-                "source access level",
-                "user-provided full text",
-                "excerpt only",
-                "citation or metadata only",
-                "model knowledge only",
-                "live or current search needed",
+                (
+                    "qualifiers and negations",
+                    "same subject",
+                    "action",
+                    "object",
+                    "scope or polarity",
+                ),
+            ),
+        ),
+        (
+            "false premises are not smoothed into claims",
+            (("false premise", "strongest supportable"),),
+        ),
+        (
+            "compact output keeps decision-changing caveats",
+            (("compact output", "must not remove", "decision-changing caveats"),),
+        ),
+        (
+            "marker-only compliance is rejected",
+            (("marker-only", "not enough", "required headings"),),
+        ),
+        (
+            "shared no-overwrite rule is explicit",
+            (("must not overwrite", "without explicit user request"),),
+        ),
+    ),
+    DOCS_ROOT / "SOURCE_LIMITS.md": (
+        (
+            "source and verification limits remain explicit",
+            (
+                (
+                    "# verification and source limits",
+                    "## source access level",
+                    "## verification rules",
+                ),
+            ),
+        ),
+        (
+            "source access levels are classified",
+            (
+                (
+                    "user-provided full text",
+                    "excerpt only",
+                    "citation or metadata only",
+                    "model knowledge only",
+                    "live or current search needed",
+                ),
+            ),
+        ),
+        (
+            "invented evidence is forbidden",
+            (("do not invent", "citations", "page numbers", "claims of having searched"),),
+        ),
+        (
+            "facts and interpretation stay separate",
+            (
+                (
+                    "separate visible facts",
+                    "interpretation",
+                    "uncertainty",
+                    "recommendation",
+                ),
+            ),
+        ),
+        (
+            "consent is not inferred from access or silence",
+            (
+                (
+                    "do not infer consent or permission",
+                    "access to material",
+                    "prior sharing",
+                    "silence",
+                    "plan to ask",
+                ),
+            ),
+        ),
+        (
+            "triage does not become high-stakes advice",
+            (
+                (
+                    "cleaning, structuring, and triage",
+                    "do not authorize direct legal, medical, or financial instructions",
+                    "attributed source content",
+                ),
+            ),
+        ),
+        (
+            "unavailable source access stays unverified",
+            (("full text", "needed", "mark the result unverified"),),
+        ),
+        (
+            "source-contained instructions are untrusted data",
+            (("source-contained", "instructions", "not operating instructions"),),
+        ),
+        (
+            "source existence is not source support",
+            (("source existence", "not source support"),),
+        ),
+        (
+            "currentness and source status need lookup or labels",
+            (("currentness", "lookup", "unverified", "source status unchecked"),),
+        ),
+        (
+            "AI involvement and venue policy limits stay visible",
+            (("ai involvement", "must not be concealed", "venue policy", "unverified"),),
+        ),
+        (
+            "private material needs consent before external lookup",
+            (("private", "external tools", "without user consent"),),
+        ),
+        (
+            "external lookup consent choices are operational",
+            (
+                (
+                    "work only from provided material",
+                    "nonsensitive keywords",
+                    "public identifiers",
+                    "quoted/private/identifying details",
+                    "explicit user consent",
+                ),
             ),
         ),
     ),
-    (
-        "invented evidence is forbidden",
-        (
-            ("do not invent", "citations", "page numbers", "claims of having searched"),
-            ("fabricated", "citations", "quotes", "page numbers"),
-        ),
-    ),
-    (
-        "facts and interpretation stay separate",
-        (
-            ("separate visible facts", "interpretation", "uncertainty", "recommendation"),
-        ),
-    ),
-    (
-        "qualifier polarity and scope stay attached",
-        (
-            (
-                "qualifiers and negations",
-                "same subject",
-                "action",
-                "object",
-                "scope or polarity",
-            ),
-        ),
-    ),
-    (
-        "consent is not inferred from access or silence",
-        (
-            (
-                "do not infer consent or permission",
-                "access to material",
-                "prior sharing",
-                "silence",
-                "plan to ask",
-            ),
-        ),
-    ),
-    (
-        "triage does not become high-stakes advice",
-        (
-            (
-                "cleaning, structuring, and triage",
-                "do not authorize direct legal, medical, or financial instructions",
-                "attributed source content",
-            ),
-        ),
-    ),
-    (
-        "unavailable source access stays unverified",
-        (
-            ("full text", "needed", "mark the result unverified"),
-            ("missing source access", "marked clearly"),
-        ),
-    ),
-    (
-        "source-contained instructions are untrusted data",
-        (
-            ("source-contained", "instructions", "not", "operating instructions"),
-            ("untrusted", "source material", "do not follow"),
-        ),
-    ),
-    (
-        "source existence is not source support",
-        (
-            ("source existence", "not source support"),
-            ("citation", "metadata", "not", "source-claim support"),
-        ),
-    ),
-    (
-        "currentness and source status need lookup or labels",
-        (
-            ("currentness", "lookup", "unverified"),
-            ("retraction", "correction", "questionable", "lookup"),
-            ("predatory", "status", "unchecked"),
-        ),
-    ),
-    (
-        "AI involvement and venue policy limits stay visible",
-        (
-            ("ai involvement", "must not be concealed"),
-            ("venue policy", "unverified"),
-            ("venue-policy", "lookup needed"),
-        ),
-    ),
-    (
-        "marker-only compliance is rejected",
-        (
-            ("marker-only", "substance"),
-            ("required headings", "not enough"),
-            ("headings", "empty", "generic"),
-        ),
-    ),
-    (
-        "private material needs consent before external lookup",
-        (
-            ("private", "external tools", "without user consent"),
-            ("confidential", "external tools", "consent"),
-        ),
-    ),
-    (
-        "external lookup consent choices are operational",
-        (
-            (
-                "work only from provided material",
-                "nonsensitive keywords",
-                "public identifiers",
-                "quoted/private/identifying details",
-                "explicit user consent",
-            ),
-        ),
-    ),
-    (
-        "shared no-overwrite rule is explicit",
-        (
-            ("must not overwrite source material", "without explicit user request"),
-            ("must not overwrite", "original notes", "without explicit user request"),
-        ),
-    ),
-)
+}
 
 SKILL_SPECIFIC_CONTRACTS: dict[str, tuple[Contract, ...]] = {
     "accessibility-prose-repair": (
@@ -569,22 +437,31 @@ class SkillInstructionContractTests(unittest.TestCase):
             with self.subTest(skill=skill_name):
                 self.assertTrue(skill_path(skill_name).exists())
 
+    def test_shared_doc_references_exist(self) -> None:
+        for reference, path in SHARED_DOC_REFERENCES:
+            with self.subTest(reference=reference, path=path):
+                self.assertTrue(
+                    path.is_file(),
+                    f"{reference} should resolve to the shared document at {path}",
+                )
+
     def test_each_skill_references_shared_contract_docs(self) -> None:
+        self.assertEqual(
+            (
+                "docs/skill_operational_boundaries.md",
+                "docs/source_limits.md",
+                "docs/auto_selection_guardrails.md",
+                "docs/routing_matrix.md",
+            ),
+            tuple(reference for reference, _ in SHARED_DOC_REFERENCES),
+        )
+
         for skill_name in MAIN_SKILLS:
             with self.subTest(skill=skill_name):
                 self.assertContractsPresent(
                     read_normalized(skill_path(skill_name)),
                     SHARED_REFERENCE_CONTRACTS,
                     f"{skill_name} should reference shared safety docs",
-                )
-
-    def test_each_skill_includes_or_references_shared_safety_contracts(self) -> None:
-        for skill_name in MAIN_SKILLS:
-            with self.subTest(skill=skill_name):
-                self.assertContractsPresent(
-                    full_skill_contract_text(skill_name),
-                    SHARED_SKILL_CONTRACTS,
-                    f"{skill_name} is missing shared safety contract language",
                 )
 
     def test_each_skill_keeps_skill_specific_safety_contracts(self) -> None:
@@ -692,11 +569,22 @@ class SkillInstructionContractTests(unittest.TestCase):
 
 
 class SharedDocumentContractTests(unittest.TestCase):
-    def test_shared_docs_keep_source_privacy_and_uncertainty_limits(self) -> None:
+    def test_policy_documents_keep_owner_specific_contracts(self) -> None:
         self.assertEqual(
-            [],
-            missing_contract_names(shared_document_text(), SHARED_DOCUMENT_CONTRACTS),
+            (
+                DOCS_ROOT / "SKILL_OPERATIONAL_BOUNDARIES.md",
+                DOCS_ROOT / "SOURCE_LIMITS.md",
+            ),
+            tuple(POLICY_OWNER_CONTRACTS),
         )
+
+        for owner_path, contracts in POLICY_OWNER_CONTRACTS.items():
+            with self.subTest(owner=owner_path.name):
+                self.assertEqual(
+                    [],
+                    missing_contract_names(read_normalized(owner_path), contracts),
+                    f"{owner_path.name} is missing contracts it canonically owns",
+                )
 
     def test_routing_matrix_delegates_suggestion_policy_to_one_owner(self) -> None:
         routing_text = read_text(DOCS_ROOT / "ROUTING_MATRIX.md")
