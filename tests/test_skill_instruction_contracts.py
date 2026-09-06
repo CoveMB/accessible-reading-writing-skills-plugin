@@ -437,6 +437,14 @@ class SkillInstructionContractTests(unittest.TestCase):
             with self.subTest(skill=skill_name):
                 self.assertTrue(skill_path(skill_name).exists())
 
+    def test_shared_doc_references_exist(self) -> None:
+        for reference, path in SHARED_DOC_REFERENCES:
+            with self.subTest(reference=reference, path=path):
+                self.assertTrue(
+                    path.is_file(),
+                    f"{reference} should resolve to the shared document at {path}",
+                )
+
     def test_each_skill_references_shared_contract_docs(self) -> None:
         self.assertEqual(
             (
