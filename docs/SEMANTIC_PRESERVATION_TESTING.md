@@ -142,43 +142,36 @@ legal, medical, financial, workplace, research, or citation decisions.
 Fixture cases are stored in
 `tests/fixtures/semantic_preservation_cases.json`.
 
-Each case contains:
+Every case requires:
 
 - `id`: stable lowercase case id ending in a three-digit number.
 - `skill`: skill folder the case belongs to.
 - `risk_type`: list of risk labels for the deformation being guarded.
 - `input`: source text or user request fragment.
 - `gold_output`: reference output that must satisfy the invariants.
-- `must_preserve_literals`: exact text that must remain visible unless an
-  explicit allowed transform is provided.
-- `must_preserve_uncertainty`: uncertainty markers that must remain visible or
-  be represented by uncertainty language.
-- `must_preserve_uncertainty_scope`: exact uncertainty-bearing claim, condition,
-  or tentative action that must remain visible when a loose uncertainty marker
-  elsewhere would be too weak.
-- `must_preserve_negation_scope`: exact negated claim or permission boundary
-  that must remain visible when keeping a loose `not` somewhere else would be
-  too weak.
-- `must_not_introduce`: terms or claims that must not appear in the output.
-- `must_not_introduce_unless_limited`: terms or claims that must not appear as
-  unsupported claims, but may appear in clear limiting or negating disclaimers.
-- `required_ambiguity_fragments`: true ambiguity fragments where choosing one
-  possible name, word, source, speaker, or context would change meaning; these
-  must stay visible with a nearby ambiguity or review marker.
-- `forbidden_patterns`: regular expressions for prohibited output patterns.
-- `allowed_transforms`: optional map from a source literal to acceptable
-  replacements, such as `cant promise` to `can't promise`.
-- `required_source_basis_fragments`: source-basis wording that must appear for
-  source-sensitive reading cases.
-- `required_source_limit_fragments`: source-limit wording that must appear for
-  source-sensitive reading cases.
-- `required_access_level`: access-level wording that must remain visible.
-- `prohibited_verification_claims`: explicit claims that must not be introduced.
-- `requires_triage_only_warning`: boolean requiring visible `TRIAGE ONLY`
-  wording.
-- `max_output_lines` / `max_output_chars`: optional compactness limits for
-  cases where low-load brevity is part of the safety contract.
-- `notes`: short human explanation of the case risk.
+
+Optional executable invariants are `must_preserve_literals`,
+`must_preserve_uncertainty`, `must_preserve_uncertainty_scope`,
+`must_preserve_negation_scope`, `must_not_introduce`,
+`must_not_introduce_unless_limited`, `required_ambiguity_fragments`,
+`forbidden_patterns`, `allowed_transforms`,
+`required_source_basis_fragments`, `required_source_limit_fragments`,
+`required_access_level`, `prohibited_verification_claims`,
+`requires_triage_only_warning`, `max_output_lines`, and
+`max_output_chars`. Their matching behavior and limits are defined under
+Invariant meanings.
+
+In the committed fixture, omit empty `required_ambiguity_fragments` and
+`must_preserve_uncertainty` fields; the schema and evaluator continue to
+accept empty lists.
+
+Assign each exact guard to only one of `must_not_introduce`,
+`forbidden_patterns`, and `prohibited_verification_claims`. Use
+`prohibited_verification_claims` as the boundary-aware owner for plain
+verification claims, and keep distinct regular-expression guards in
+`forbidden_patterns`.
+
+`notes` remains a short, non-executable human explanation of each case's risk.
 
 ## Risk-label schema requirements
 
@@ -282,8 +275,8 @@ not pass merely because some unrelated `not` remains visible.
 `must_not_introduce` blocks high-risk words, claims, commitments, advice, or
 facts that were not present in the input. It is strict: if the term appears, the
 check fails even when the surrounding sentence negates or limits the term. Use
-it for concrete invented claims such as `refund approved`, `policy confirms`,
-`you should stop meds`, or `safe to share`.
+it for concrete invented claims such as `refund approved`, `you should stop
+meds`, or `safe to share`.
 
 `must_not_introduce_unless_limited` blocks the same kind of risk only when the
 term is introduced as an unsupported claim. It allows the term when the nearby
@@ -301,6 +294,10 @@ an unresolved choice instead of choosing an interpretation, such as uncertain
 names, homophones, ambiguous typo corrections, pronoun references, context
 alternatives, noisy phrases with multiple plausible readings, or unclear
 speaker/source identity.
+Good markers name the exact ambiguous fragment and the decision the user or
+reviewer must make. A literal `Ambiguity:` label is unnecessary when another
+nearby review, question, verification, or source-basis marker keeps the
+unresolved choice visible.
 The checker also rejects known resolution phrases near these fragments, such as
 claims that the ambiguity is resolved or that one spelling/name/meaning is
 correct, because that can falsely pass as a review note while still guessing.
@@ -330,7 +327,8 @@ unverified source support applies`.
 `required_access_level` requires a specific access-level phrase to appear.
 
 `prohibited_verification_claims` blocks case-specific unsupported claims that
-the source, full text, policy, article, or citation verifies something.
+the source, full text, policy, article, or citation verifies something, such as
+`policy confirms`.
 
 `requires_triage_only_warning` requires visible `TRIAGE ONLY` wording when an
 output could otherwise be mistaken for verified synthesis or advice.
@@ -350,25 +348,6 @@ that ask what, if anything, a person consents to share remain valid limits;
 they are not treated as permission. These checks reduce common overclaim risks,
 but they are not an exhaustive synonym detector and cannot catch every unsafe
 wording.
-
-## Ambiguity markers
-
-Use ambiguity markers when a cleanup, summary, triage decision, or note could
-change meaning if the system guesses between possible meanings. Good markers
-name the exact fragment and the decision the user or reviewer must make.
-
-Use ambiguity markers for cases such as uncertain names, homophones, noisy
-dictation with multiple plausible readings, ambiguous typo corrections, unclear
-pronoun references, context alternatives, and unclear speaker/source
-attribution.
-
-Do not use ambiguity markers as filler or as a generic review-note requirement.
-Tentative commitments belong in `must_preserve_uncertainty_scope`; negated
-statuses, refusals, consent limits, and privacy boundaries belong in
-`must_preserve_negation_scope`; title-only, citation-only, snippet-only,
-abstract-only, and headings-only access limits belong in source-basis and
-source-limit fields. If the output can preserve meaning without a visible
-`Ambiguity:` label, the case should not use `required_ambiguity_fragments`.
 
 ## No LLM or API calls in CI
 

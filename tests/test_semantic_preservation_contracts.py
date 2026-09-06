@@ -134,6 +134,43 @@ class SemanticPreservationFixtureTests(unittest.TestCase):
                 self.assertIn(case_id, cases)
                 self.assertTrue(risk_types <= set(cases[case_id]["risk_type"]))
 
+    def test_fixture_uses_one_owner_for_duplicate_literal_guards(self) -> None:
+        cases = self.load_fixture()["cases"]
+        guard_fields = (
+            "must_not_introduce",
+            "forbidden_patterns",
+            "prohibited_verification_claims",
+        )
+
+        overlaps = []
+        for case in cases:
+            for index, field_name in enumerate(guard_fields):
+                field_values = set(case.get(field_name, []))
+                for other_field_name in guard_fields[index + 1 :]:
+                    duplicates = field_values.intersection(
+                        case.get(other_field_name, [])
+                    )
+                    for value in duplicates:
+                        overlaps.append(
+                            f"{case['id']}: {field_name}/{other_field_name}: {value}"
+                        )
+
+        self.assertEqual([], overlaps)
+
+        refund_case = next(
+            case
+            for case in cases
+            if case["id"] == "low_load_yes_no_refund_006"
+        )
+        self.assertNotIn(
+            "policy confirms",
+            refund_case.get("must_not_introduce", []),
+        )
+        self.assertIn(
+            "policy confirms",
+            refund_case.get("prohibited_verification_claims", []),
+        )
+
 
 class SemanticPreservationSchemaTests(unittest.TestCase):
     def test_schema_rejects_duplicate_and_unstable_ids(self) -> None:
@@ -1337,6 +1374,26 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
             self.failures_for(str(prohibited_case["gold_output"]), prohibited_case),
         )
 
+    def test_checker_uses_token_boundaries_for_introduced_terms(self) -> None:
+        case = valid_case(
+            must_not_introduce=["confirmed"],
+            forbidden_patterns=[],
+        )
+        gold_output = str(case["gold_output"])
+
+        self.assertEqual(
+            [],
+            self.failures_for(gold_output + "\nStatus remains unconfirmed.", case),
+        )
+
+        messages = "\n".join(
+            self.failures_for(gold_output + "\nStatus is confirmed.", case)
+        )
+        self.assertIn(
+            "must_not_introduce: expected term absent: confirmed",
+            messages,
+        )
+
     def test_checker_rejects_reversed_source_limit_polarity(self) -> None:
         case = valid_case(
             id="reading_source_polarity_001",
@@ -1626,6 +1683,27 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
         self.assertIn("required_source_limit_fragments", messages)
         self.assertIn("required_access_level", messages)
         self.assertIn("triage_only_warning", messages)
+        self.assertIn("prohibited_verification_claims", messages)
+
+    def test_checker_accepts_unverified_synthesis_but_rejects_verified_synthesis(self) -> None:
+        case = self.fixture_case("reading_title_only_access_002")
+        gold_output = str(case["gold_output"])
+
+        self.assertEqual(
+            [],
+            self.failures_for(
+                f"{gold_output}\nThis remains an unverified synthesis.",
+                case,
+            ),
+        )
+
+        messages = "\n".join(
+            self.failures_for(
+                f"{gold_output}\nThis is a verified synthesis.",
+                case,
+            )
+        )
+
         self.assertIn("prohibited_verification_claims", messages)
 
     def test_checker_rejects_requested_review_risk_regressions(self) -> None:
