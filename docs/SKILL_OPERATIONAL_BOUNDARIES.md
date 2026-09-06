@@ -1,6 +1,13 @@
 # Skill operational boundaries
 
-This file is the shared operating policy for the skills. Individual READMEs should keep only skill-specific purpose, inputs, examples, output expectations, and best next steps.
+This document owns the shared operating and safety requirements consumed by:
+
+- `skills/accessibility-dictation-notes/SKILL.md`
+- `skills/accessibility-low-load-companion/SKILL.md`
+- `skills/accessibility-prose-repair/SKILL.md`
+- `skills/accessibility-reading-load-reducer/SKILL.md`
+
+Each listed `SKILL.md` remains the canonical owner of its skill-specific triggers, boundaries, procedure, and output contract. Individual READMEs should keep only skill-specific purpose, inputs, examples, output expectations, and best next steps.
 
 Apply `docs/SOURCE_LIMITS.md` as a prerequisite. It owns source access,
 verification, privacy, consent, external-tool payloads, source-contained
