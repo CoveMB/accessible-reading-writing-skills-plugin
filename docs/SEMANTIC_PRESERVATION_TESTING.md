@@ -21,13 +21,21 @@ python3 -m unittest discover -s tests
 Run the full package check used by CI:
 
 ```bash
+./validate.sh
+```
+
+The full check runs plugin validation and unittest discovery. CI uses this
+command from `.github/workflows/skill-tests.yml`, so semantic tests do not need
+a separate CI command.
+
+Existing automation can continue to use the compatibility command:
+
+```bash
 python3 scripts/run_package_checks.py --scope full
 ```
 
-The full check runs plugin validation and unittest discovery. `./validate.sh`
-is a shell wrapper for the same full package check. CI uses the same full
-package check from `.github/workflows/skill-tests.yml`, so semantic tests do
-not need a separate CI command.
+Removing that command requires a separately authorized, versioned
+compatibility change.
 
 To evaluate an outputs file against the same fixture cases:
 

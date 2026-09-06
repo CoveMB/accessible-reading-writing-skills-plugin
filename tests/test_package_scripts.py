@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -26,18 +26,116 @@ import validate_plugin
 UNIT_TEST_CHECK = ("-m", "unittest", "discover", "-s", "tests")
 SKILL_VALIDATION_CHECK = ("scripts/validate_plugin.py", ".")
 CI_WORKFLOW_PATH = ROOT / ".github" / "workflows" / "skill-tests.yml"
-FULL_PACKAGE_CHECK_COMMAND = "python3 scripts/run_package_checks.py --scope full"
 
 
-class PackageCheckTests(unittest.TestCase):
-    def test_full_scope_runs_skill_validation(self) -> None:
-        self.assertIn(
-            SKILL_VALIDATION_CHECK,
-            run_package_checks.checks_for_scope("full"),
+class PackageCheckCompatibilityTests(unittest.TestCase):
+    def command_result(
+        self,
+        returncode: int = 0,
+        stdout: str = "",
+        stderr: str = "",
+    ) -> mock.Mock:
+        return mock.Mock(
+            returncode=returncode,
+            stdout=stdout,
+            stderr=stderr,
         )
 
-    def test_full_scope_runs_unit_tests(self) -> None:
-        self.assertIn(UNIT_TEST_CHECK, run_package_checks.checks_for_scope("full"))
+    def test_full_scope_runs_validation_then_unit_tests_at_explicit_root(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            side_effect=[self.command_result(), self.command_result()],
+        ) as run:
+            status = run_package_checks.main(
+                ["--scope", "full", "--root", str(ROOT)]
+            )
+
+        self.assertEqual(0, status)
+        self.assertEqual(
+            [
+                [sys.executable, "scripts/validate_plugin.py", "."],
+                [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+            ],
+            [call.args[0] for call in run.call_args_list],
+        )
+        self.assertEqual(
+            [ROOT.resolve(), ROOT.resolve()],
+            [call.kwargs["cwd"] for call in run.call_args_list],
+        )
+
+    def test_validation_failure_stops_before_unit_tests(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            return_value=self.command_result(returncode=7),
+        ) as run:
+            status = run_package_checks.main(["--scope", "full"])
+
+        self.assertEqual(7, status)
+        run.assert_called_once()
+
+    def test_unit_test_failure_is_returned_after_successful_validation(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            side_effect=[
+                self.command_result(returncode=0),
+                self.command_result(returncode=9),
+            ],
+        ) as run:
+            status = run_package_checks.main(["--scope", "full"])
+
+        self.assertEqual(9, status)
+        self.assertEqual(2, run.call_count)
+
+    def test_install_scope_uses_default_root_and_skips_unit_tests(self) -> None:
+        with mock.patch.object(
+            run_package_checks.subprocess,
+            "run",
+            return_value=self.command_result(),
+        ) as run:
+            status = run_package_checks.main(["--scope", "install"])
+
+        self.assertEqual(0, status)
+        run.assert_called_once()
+        self.assertEqual(
+            [sys.executable, "scripts/validate_plugin.py", "."],
+            run.call_args.args[0],
+        )
+        self.assertEqual(
+            run_package_checks.ROOT.resolve(),
+            run.call_args.kwargs["cwd"],
+        )
+
+    def test_invalid_scope_exits_with_argparse_status_two(self) -> None:
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit) as raised:
+            run_package_checks.main(["--scope", "invalid"])
+
+        self.assertEqual(2, raised.exception.code)
+        self.assertIn("invalid choice", stderr.getvalue())
+
+    def test_child_output_channels_and_newline_normalization_are_preserved(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(
+                run_package_checks.subprocess,
+                "run",
+                return_value=self.command_result(
+                    stdout="child stdout",
+                    stderr="child stderr",
+                ),
+            ),
+            redirect_stdout(stdout),
+            redirect_stderr(stderr),
+        ):
+            status = run_package_checks.main(["--scope", "install"])
+
+        self.assertEqual(0, status)
+        self.assertEqual("child stdout\n", stdout.getvalue())
+        self.assertEqual("child stderr\n", stderr.getvalue())
 
 
 class ContinuousIntegrationTests(unittest.TestCase):
@@ -45,7 +143,11 @@ class ContinuousIntegrationTests(unittest.TestCase):
         self.assertTrue(CI_WORKFLOW_PATH.exists())
         workflow_text = CI_WORKFLOW_PATH.read_text(encoding="utf-8")
 
-        self.assertIn(FULL_PACKAGE_CHECK_COMMAND, workflow_text)
+        self.assertIn("run: ./validate.sh", workflow_text)
+        self.assertNotIn(
+            "python3 scripts/run_package_checks.py --scope full",
+            workflow_text,
+        )
 
 
 class PackageArchiveSafetyTests(unittest.TestCase):
@@ -121,7 +223,7 @@ class PackageArchiveSafetyTests(unittest.TestCase):
 
             packaged_root = extract_root / ROOT.name
             with redirect_stdout(io.StringIO()):
-                self.assertEqual(0, run_package_checks.run_checks("install", packaged_root))
+                self.assertEqual(0, package_plugin.run_validation(packaged_root))
 
 
 class MarketplaceContractTests(unittest.TestCase):
