@@ -134,7 +134,13 @@ legal, medical, financial, workplace, research, or citation decisions.
 Fixture cases are stored in
 `tests/fixtures/semantic_preservation_cases.json`.
 
-Every case requires `id`, `skill`, `risk_type`, `input`, and `gold_output`.
+Every case requires:
+
+- `id`: stable lowercase case id ending in a three-digit number.
+- `skill`: skill folder the case belongs to.
+- `risk_type`: list of risk labels for the deformation being guarded.
+- `input`: source text or user request fragment.
+- `gold_output`: reference output that must satisfy the invariants.
 
 Optional executable invariants are `must_preserve_literals`,
 `must_preserve_uncertainty`, `must_preserve_uncertainty_scope`,
