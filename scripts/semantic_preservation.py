@@ -740,15 +740,39 @@ def evaluate_case(case: dict[str, Any], output: str | None = None) -> list[str]:
     return [
         *must_preserve_literal_failures(case, candidate_output, transforms),
         *must_preserve_uncertainty_failures(case, candidate_output),
-        *must_preserve_uncertainty_scope_failures(case, candidate_output, transforms),
-        *must_preserve_negation_scope_failures(case, candidate_output, transforms),
+        *required_fragment_failures(
+            case,
+            candidate_output,
+            transforms,
+            "must_preserve_uncertainty_scope",
+            "scoped uncertainty preserved",
+        ),
+        *required_fragment_failures(
+            case,
+            candidate_output,
+            transforms,
+            "must_preserve_negation_scope",
+            "scoped negation preserved",
+        ),
         *must_not_introduce_failures(case, candidate_output),
         *must_not_introduce_unless_limited_failures(case, candidate_output),
         *forbidden_pattern_failures(case, candidate_output),
         *required_ambiguity_fragment_failures(case, candidate_output, transforms),
         *ambiguity_resolution_failures(case, candidate_output, transforms),
-        *required_source_basis_fragment_failures(case, candidate_output, transforms),
-        *required_source_limit_fragment_failures(case, candidate_output, transforms),
+        *required_fragment_failures(
+            case,
+            candidate_output,
+            transforms,
+            "required_source_basis_fragments",
+            "source basis fragment visible",
+        ),
+        *required_fragment_failures(
+            case,
+            candidate_output,
+            transforms,
+            "required_source_limit_fragments",
+            "source limit fragment visible",
+        ),
         *required_access_level_failures(case, candidate_output, transforms),
         *source_fragment_polarity_failures(case, candidate_output, transforms),
         *triage_only_warning_failures(case, candidate_output),
@@ -796,34 +820,6 @@ def must_preserve_uncertainty_failures(
         for marker in case.get("must_preserve_uncertainty", [])
         if not uncertainty_preserved(str(marker), output)
     ]
-
-
-def must_preserve_uncertainty_scope_failures(
-    case: dict[str, Any],
-    output: str,
-    transforms: dict[str, list[str]],
-) -> list[str]:
-    return required_fragment_failures(
-        case,
-        output,
-        transforms,
-        "must_preserve_uncertainty_scope",
-        "scoped uncertainty preserved",
-    )
-
-
-def must_preserve_negation_scope_failures(
-    case: dict[str, Any],
-    output: str,
-    transforms: dict[str, list[str]],
-) -> list[str]:
-    return required_fragment_failures(
-        case,
-        output,
-        transforms,
-        "must_preserve_negation_scope",
-        "scoped negation preserved",
-    )
 
 
 def must_not_introduce_failures(case: dict[str, Any], output: str) -> list[str]:
@@ -931,34 +927,6 @@ def ambiguity_resolution_failures(
     return failures
 
 
-def required_source_basis_fragment_failures(
-    case: dict[str, Any],
-    output: str,
-    transforms: dict[str, list[str]],
-) -> list[str]:
-    return required_fragment_failures(
-        case,
-        output,
-        transforms,
-        "required_source_basis_fragments",
-        "source basis fragment visible",
-    )
-
-
-def required_source_limit_fragment_failures(
-    case: dict[str, Any],
-    output: str,
-    transforms: dict[str, list[str]],
-) -> list[str]:
-    return required_fragment_failures(
-        case,
-        output,
-        transforms,
-        "required_source_limit_fragments",
-        "source limit fragment visible",
-    )
-
-
 def required_fragment_failures(
     case: dict[str, Any],
     output: str,
@@ -970,7 +938,7 @@ def required_fragment_failures(
     return [
         failure(case_id, field_name, f"{expected_label}: {fragment}")
         for fragment in case.get(field_name, [])
-        if not source_fragment_present(str(fragment), output, transforms)
+        if not literal_or_transform_present(str(fragment), output, transforms)
     ]
 
 
@@ -982,7 +950,7 @@ def required_access_level_failures(
     required_access_level = case.get("required_access_level")
     if not isinstance(required_access_level, str):
         return []
-    if source_fragment_present(required_access_level, output, transforms):
+    if literal_or_transform_present(required_access_level, output, transforms):
         return []
     return [
         failure(
@@ -1292,7 +1260,7 @@ def invented_verification_claim_failures(
 
 
 def first_unlimited_term_span(output: str, term: str) -> tuple[int, int] | None:
-    for span in source_fragment_spans(term, output, {}):
+    for span in literal_or_transform_spans(term, output, {}):
         if not term_match_is_limited(output, span):
             return span
     return None
@@ -1535,15 +1503,6 @@ def literal_or_transform_present(
     return any(bounded_literal_pattern(candidate).search(output) for candidate in candidates)
 
 
-def source_fragment_present(
-    fragment: str,
-    output: str,
-    transforms: dict[str, list[str]],
-) -> bool:
-    candidates = unique_ordered([fragment, *transforms.get(fragment, [])])
-    return any(bounded_literal_pattern(candidate).search(output) for candidate in candidates)
-
-
 def negated_source_fragment_present(
     fragment: str,
     output: str,
@@ -1552,21 +1511,8 @@ def negated_source_fragment_present(
     transform_map = transforms or {}
     return any(
         fragment_span_is_negated(output, span)
-        for span in source_fragment_spans(fragment, output, transform_map)
+        for span in literal_or_transform_spans(fragment, output, transform_map)
     )
-
-
-def source_fragment_spans(
-    fragment: str,
-    output: str,
-    transforms: dict[str, list[str]],
-) -> list[tuple[int, int]]:
-    candidates = unique_ordered([fragment, *transforms.get(fragment, [])])
-    return [
-        match.span()
-        for candidate in candidates
-        for match in bounded_literal_pattern(candidate).finditer(output)
-    ]
 
 
 def fragment_span_is_negated(output: str, span: tuple[int, int]) -> bool:

@@ -707,6 +707,38 @@ class SemanticInvariantCheckerTests(unittest.TestCase):
             messages,
         )
 
+        unlimited_then_limited = (
+            "This is legal advice. This is not legal advice."
+        )
+        unlimited_then_limited_span = (
+            semantic_preservation.first_unlimited_term_span(
+                unlimited_then_limited,
+                "legal advice",
+            )
+        )
+        self.assertIsNotNone(unlimited_then_limited_span)
+        assert unlimited_then_limited_span is not None
+        self.assertEqual(
+            unlimited_then_limited.index("legal advice"),
+            unlimited_then_limited_span[0],
+        )
+
+        limited_then_unlimited = (
+            "This is not legal advice. This is legal advice."
+        )
+        limited_then_unlimited_span = (
+            semantic_preservation.first_unlimited_term_span(
+                limited_then_unlimited,
+                "legal advice",
+            )
+        )
+        self.assertIsNotNone(limited_then_unlimited_span)
+        assert limited_then_unlimited_span is not None
+        self.assertEqual(
+            limited_then_unlimited.rindex("legal advice"),
+            limited_then_unlimited_span[0],
+        )
+
     def test_checker_rejects_limiter_that_targets_different_claim(self) -> None:
         case = self.limited_term_case(
             "legal advice",
