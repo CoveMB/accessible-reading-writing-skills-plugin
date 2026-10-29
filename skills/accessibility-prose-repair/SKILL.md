@@ -43,7 +43,7 @@ Use this instead of `accessibility-dictation-notes` when the input is already pr
 
 ## Source basis and limits
 
-Apply `docs/SOURCE_LIMITS.md` whenever source access, factual or verification
+Apply [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) whenever source access, factual or verification
 claims, privacy or consent, external tools or sharing, currentness or source
 status, or high-stakes reliance is involved.
 
@@ -57,8 +57,8 @@ Compact repair must keep caveats that affect claim strength, consent, responsibi
 
 ## Operational boundaries
 
-- Apply `docs/SKILL_OPERATIONAL_BOUNDARIES.md`, `docs/SOURCE_LIMITS.md`,
-  `docs/AUTO_SELECTION_GUARDRAILS.md`, and `docs/ROUTING_MATRIX.md`.
+- Apply [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md), [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md),
+  [AUTO_SELECTION_GUARDRAILS.md](../../docs/AUTO_SELECTION_GUARDRAILS.md), and [ROUTING_MATRIX.md](../../docs/ROUTING_MATRIX.md).
 - File boundaries — **read:** only user-provided passages, drafts, documents,
   style constraints, citation notes, or artifacts explicitly named in the
   request; **write:** none by default, except requested revised passages,

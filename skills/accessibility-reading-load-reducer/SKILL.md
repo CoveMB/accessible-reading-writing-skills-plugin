@@ -43,7 +43,7 @@ Use `accessibility-low-load-companion` when reading load is mixed with dictation
 
 ## Source basis and limits
 
-Apply `docs/SOURCE_LIMITS.md` whenever source access, factual or verification
+Apply [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) whenever source access, factual or verification
 claims, privacy or consent, external tools or sharing, currentness or source
 status, or high-stakes reliance is involved. Keep source access level, what can
 be verified, what remains uncertain, and user verification needs visible when
@@ -65,8 +65,8 @@ Use compact output by default for low-risk reading triage, time-boxed triage, or
 
 ## Operational boundaries
 
-- Apply `docs/SKILL_OPERATIONAL_BOUNDARIES.md`, `docs/SOURCE_LIMITS.md`,
-  `docs/AUTO_SELECTION_GUARDRAILS.md`, and `docs/ROUTING_MATRIX.md`.
+- Apply [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md), [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md),
+  [AUTO_SELECTION_GUARDRAILS.md](../../docs/AUTO_SELECTION_GUARDRAILS.md), and [ROUTING_MATRIX.md](../../docs/ROUTING_MATRIX.md).
 - File boundaries — **read:** only user-provided documents, excerpts, search
   results, bibliographies, drafts, notes, tasks, or constraints explicitly named
   in the request; **write:** none by default, except requested reading triage

@@ -12,4 +12,4 @@ Use accessibility-low-load-companion. I have rough notes, typos, and too much to
 Use accessibility-low-load-companion. I am not sure whether this needs dictation cleanup, reading triage, or prose repair.
 ```
 
-Follow `docs/SKILL_OPERATIONAL_BOUNDARIES.md`. Use `docs/ROUTING_MATRIX.md` for route selection and `docs/SOURCE_LIMITS.md` when facts, privacy, evidence, or external sharing matter.
+Follow [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md). Use [ROUTING_MATRIX.md](../../docs/ROUTING_MATRIX.md) for route selection and [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) when facts, privacy, evidence, or external sharing matter.

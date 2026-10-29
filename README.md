@@ -2,7 +2,7 @@
 
 Version: 1.0.0
 
-Accessible Reading and Writing is a local plugin for reducing reading and writing load across everyday, work, learning, and research contexts. It handles rough notes, voice transcripts, dense documents, typo-heavy passages, dyslexic or dysorthographic writing friction, and mixed or unclear accessibility bottlenecks.
+Accessible Reading and Writing provides a Codex plugin and portable Agent Skills for reducing reading and writing load across everyday, work, learning, and research contexts. It handles rough notes, voice transcripts, dense documents, typo-heavy passages, dyslexic or dysorthographic writing friction, and mixed or unclear accessibility bottlenecks.
 
 The package prioritizes meaning preservation. It can clean, segment, simplify structure, and identify next actions, but it should not change the user's intent or turn uncertain material into confident claims.
 
@@ -12,7 +12,22 @@ The package name is `accessible-reading-writing-plugin`. Its skill names use the
 
 Public repository: [CoveMB/accessible-reading-writing-skills-plugin](https://github.com/CoveMB/accessible-reading-writing-skills-plugin).
 
-## Install through a marketplace
+## OpenCode v2 and Antigravity
+
+Export self-contained skills before installing them in either host:
+
+```bash
+python3 scripts/export_skills.py --out dist/portable-skills
+```
+
+Copy the four exported directories into a supported skills location, such as
+your workspace's `.agents/skills/`. The exporter refuses existing output paths
+and does not modify installed plugins or settings. See the
+[host compatibility guide](docs/HOST_COMPATIBILITY.md) for installation paths,
+updates, invocation, privacy boundaries, and native acceptance checks.
+Structural compatibility is tested; native host sessions remain unverified.
+
+## Install through a Codex marketplace
 
 Choose one marketplace source.
 
@@ -105,6 +120,12 @@ Private notes, drafts, transcripts, and sensitive documents should not be sent t
 
 ## Validate
 
+Shared OpenAI policy metadata and package inclusion rules are owned by
+[`scripts/plugin_utils.py`](scripts/plugin_utils.py). The validator checks each
+committed `agents/openai.yaml` policy block without rewriting it. Runtime lookup
+rules also appear in the [operational boundaries](docs/SKILL_OPERATIONAL_BOUNDARIES.md)
+so hosts do not have to interpret Codex metadata.
+
 ```bash
 ./validate.sh
 ```
@@ -116,7 +137,7 @@ risk, and overstated source access. See
 [`docs/SEMANTIC_PRESERVATION_TESTING.md`](docs/SEMANTIC_PRESERVATION_TESTING.md)
 for how the fixtures and deterministic invariants work, and for their limits.
 
-## Uninstall
+## Uninstall from Codex
 
 Remove the installed plugin through Codex:
 

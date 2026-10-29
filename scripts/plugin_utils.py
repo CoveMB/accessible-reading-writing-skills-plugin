@@ -27,6 +27,13 @@ ALLOWED_PACKAGE_ROOT_FILES = {
     "README.md",
     "validate.sh",
 }
+PORTABLE_SKILL_FILES = ("SKILL.md", "README.md", "agents/openai.yaml")
+PORTABLE_SHARED_DOCUMENTS = (
+    "SKILL_OPERATIONAL_BOUNDARIES.md",
+    "SOURCE_LIMITS.md",
+    "AUTO_SELECTION_GUARDRAILS.md",
+    "ROUTING_MATRIX.md",
+)
 EXCLUDED_DIRECTORIES = {
     ".git",
     ".mypy_cache",

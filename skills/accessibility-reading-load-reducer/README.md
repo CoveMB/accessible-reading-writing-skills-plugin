@@ -12,4 +12,4 @@ Use accessibility-reading-load-reducer. Tell me what to read closely, skim, park
 Use accessibility-reading-load-reducer. I have 20 links and only 30 minutes. Build a low-load reading plan.
 ```
 
-Follow `docs/SKILL_OPERATIONAL_BOUNDARIES.md`. Use `docs/SOURCE_LIMITS.md` when the material includes factual claims, citations, current facts, high-stakes decisions, or external sharing.
+Follow [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md). Use [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) when the material includes factual claims, citations, current facts, high-stakes decisions, or external sharing.
