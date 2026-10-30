@@ -12,4 +12,4 @@ Use accessibility-dictation-notes. Turn this voice note into cleaned notes, open
 Use accessibility-dictation-notes. Segment this meeting transcript into decisions, tasks, ambiguity, and follow-up.
 ```
 
-Follow `docs/SKILL_OPERATIONAL_BOUNDARIES.md`. Use `docs/SOURCE_LIMITS.md` when transcripts include factual claims, private people, research, external sharing, or high-stakes decisions.
+Follow [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md). Use [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) when transcripts include factual claims, private people, research, external sharing, or high-stakes decisions.

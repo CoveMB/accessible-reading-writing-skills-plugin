@@ -42,7 +42,7 @@ Use this instead of `accessibility-prose-repair` when the input is not yet prose
 
 ## Source basis and limits
 
-Apply `docs/SOURCE_LIMITS.md` whenever source access, factual or verification
+Apply [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) whenever source access, factual or verification
 claims, privacy or consent, external tools or sharing, currentness or source
 status, or high-stakes reliance is involved.
 
@@ -56,8 +56,8 @@ Use compact output by default for low-risk dictation cleanup, short transcripts,
 
 ## Operational boundaries
 
-- Apply `docs/SKILL_OPERATIONAL_BOUNDARIES.md`, `docs/SOURCE_LIMITS.md`,
-  `docs/AUTO_SELECTION_GUARDRAILS.md`, and `docs/ROUTING_MATRIX.md`.
+- Apply [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md), [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md),
+  [AUTO_SELECTION_GUARDRAILS.md](../../docs/AUTO_SELECTION_GUARDRAILS.md), and [ROUTING_MATRIX.md](../../docs/ROUTING_MATRIX.md).
 - File boundaries — **read:** only user-provided transcripts, dictated notes,
   drafts, documents, source excerpts, tasks, or constraints explicitly named in
   the request; **write:** none by default, except requested cleaned notes,

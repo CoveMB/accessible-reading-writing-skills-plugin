@@ -38,7 +38,11 @@ SEMVER_RE = re.compile(
 MARKETPLACE_NAME = "accessible-reading-writing-local"
 MARKETPLACE_DISPLAY_NAME = "Accessible Reading and Writing Local"
 MARKETPLACE_RELATIVE_PATH = Path(".agents/plugins/marketplace.json")
-MARKDOWN_LINK_RE = re.compile(r"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)")
+MARKDOWN_LINK_RE = re.compile(
+    r"\[[^\]]+\]\(([^)#\s]+)(?:#[^)\s]*)?"
+    r"(?:\s+(?:\"(?:\\[^\n]|[^\"\\\n])*\"|"
+    r"'(?:\\[^\n]|[^'\\\n])*'|\((?:\\[^\n]|[^()\\\n])*\)))?\s*\)"
+)
 BACKTICK_REFERENCE_RE = re.compile(r"`([^`\n]+)`")
 LOCAL_REFERENCE_PREFIXES = (
     ".codex-plugin/",
@@ -103,12 +107,16 @@ def clean_reference(reference: str) -> str:
     return reference.strip().split("#", 1)[0]
 
 
-def broken_references_from_values(root: Path, path: Path, label: str, references: list[str]) -> list[str]:
+def broken_references_from_values(
+    root: Path, path: Path, label: str, references: list[str], *, markdown_links: bool = False
+) -> list[str]:
     errors: list[str] = []
     for reference in references:
         normalized = clean_reference(reference)
         if not is_path_like_reference(normalized):
-            continue
+            if (not markdown_links or not normalized or normalized.startswith(("/", "~", "#"))
+                    or is_external_reference(normalized)):
+                continue
         exists, escaped = reference_exists_inside_root(
             root,
             reference_candidates(root, path, normalized),
@@ -123,8 +131,14 @@ def broken_references_from_values(root: Path, path: Path, label: str, references
 
 def broken_local_references(root: Path, path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
-    references = [*MARKDOWN_LINK_RE.findall(text), *BACKTICK_REFERENCE_RE.findall(text)]
-    return broken_references_from_values(root, path, path.name, references)
+    return [
+        *broken_references_from_values(
+            root, path, path.name, MARKDOWN_LINK_RE.findall(text), markdown_links=True
+        ),
+        *broken_references_from_values(
+            root, path, path.name, BACKTICK_REFERENCE_RE.findall(text)
+        ),
+    ]
 
 
 def string_values(value: Any) -> list[str]:

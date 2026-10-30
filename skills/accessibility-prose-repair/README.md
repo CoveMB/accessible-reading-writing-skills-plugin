@@ -12,4 +12,4 @@ Use accessibility-prose-repair. Fix spelling and sentence boundaries without cha
 Use accessibility-prose-repair. Clean this email for grammar and readability, but do not add commitments.
 ```
 
-Follow `docs/SKILL_OPERATIONAL_BOUNDARIES.md`. Use `docs/SOURCE_LIMITS.md` when the prose includes factual claims, citations, private details, external sharing, or high-stakes decisions.
+Follow [SKILL_OPERATIONAL_BOUNDARIES.md](../../docs/SKILL_OPERATIONAL_BOUNDARIES.md). Use [SOURCE_LIMITS.md](../../docs/SOURCE_LIMITS.md) when the prose includes factual claims, citations, private details, external sharing, or high-stakes decisions.

@@ -2,14 +2,14 @@
 
 This document owns the shared operating and safety requirements consumed by:
 
-- `skills/accessibility-dictation-notes/SKILL.md`
-- `skills/accessibility-low-load-companion/SKILL.md`
-- `skills/accessibility-prose-repair/SKILL.md`
-- `skills/accessibility-reading-load-reducer/SKILL.md`
+- `accessibility-dictation-notes`
+- `accessibility-low-load-companion`
+- `accessibility-prose-repair`
+- `accessibility-reading-load-reducer`
 
 Each listed `SKILL.md` remains the canonical owner of its skill-specific triggers, boundaries, procedure, and output contract. Individual READMEs should keep only skill-specific purpose, inputs, examples, output expectations, and best next steps.
 
-Apply `docs/SOURCE_LIMITS.md` as a prerequisite. It owns source access,
+Apply [Source limits](SOURCE_LIMITS.md) as a prerequisite. It owns source access,
 verification, privacy, consent, external-tool payloads, source-contained
 instructions, currentness and source-status limits, and legal, medical,
 financial, or other high-stakes reliance boundaries.
@@ -48,7 +48,18 @@ financial, or other high-stakes reliance boundaries.
 
 ## Agent policy metadata
 
-Shared policy values are defined in `scripts/plugin_utils.py`. Each committed `agents/openai.yaml` policy block must match them; `scripts/validate_plugin.py` checks this but does not generate or rewrite the file.
+Follow these rules on every host. OpenAI agent metadata represents the policy;
+it is not a sandbox or an enforcement mechanism on other hosts. Skill loading
+does not grant permission to browse, share private material, or write files.
+
+The lookup policy for each skill is:
+
+| Skill | Lookup policy |
+| --- | --- |
+| `accessibility-reading-load-reducer` | `conditional` |
+| `accessibility-dictation-notes` | `route-only` |
+| `accessibility-prose-repair` | `route-only` |
+| `accessibility-low-load-companion` | `route-only` |
 
 Allowed `external_lookup_allowed` values are `conditional`, `route-only`, and `none`.
 
