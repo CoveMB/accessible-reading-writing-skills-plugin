@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
+import export_skills
 import plugin_utils
 import validate_plugin
 
@@ -138,6 +139,60 @@ class PortableSkillTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse(output.exists())
 
+    def test_titled_missing_targets_are_rejected_by_both_validators(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            skill = Path(temporary) / "skill"
+            skill.mkdir()
+            document = skill / "SKILL.md"
+            for target in ("missing.md", "./missing.md", "references/missing.md"):
+                for title in (
+                    '"description"', "'description'", "(description)",
+                    r'"description with \"quotes\""',
+                    r"'description with \'quotes\''",
+                    r"(description with \) parenthesis)",
+                ):
+                    with self.subTest(target=target, title=title):
+                        document.write_text(f"[missing]({target}#section {title})\n")
+                        self.assertEqual(
+                            validate_plugin.broken_local_references(skill, document),
+                            [f"SKILL.md: broken local reference: {target}"],
+                        )
+                        with self.assertRaisesRegex(ValueError, "Unbundled portable reference") as error:
+                            export_skills.validate_portable_links(skill)
+                        self.assertIn(target, str(error.exception))
+                        self.assertNotIn("description", str(error.exception))
+
+    def test_titled_bundled_readme_links_export_successfully(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            plugin_utils.copy_package_tree(ROOT, source)
+            skill = next((source / "skills").iterdir())
+            with (skill / "SKILL.md").open("a") as instructions:
+                instructions.write(
+                    '\n[readme](README.md "Double quoted title")\n'
+                    "[readme](README.md#section 'Single quoted title')\n"
+                    '[readme](README.md (Parenthesized title))\n'
+                )
+            output = base / "export"
+            result = self.export(source, output)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue((output / skill.name / "README.md").is_file())
+
+    def test_titled_missing_link_prevents_export(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            source = base / "source"
+            plugin_utils.copy_package_tree(ROOT, source)
+            skill = next((source / "skills").iterdir())
+            with (skill / "SKILL.md").open("a") as instructions:
+                instructions.write('\n[missing](missing.md "Missing title")\n')
+            output = base / "export"
+            result = self.export(source, output)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("broken local reference: missing.md", result.stdout + result.stderr)
+            self.assertFalse(output.exists())
+
     def test_unbundled_link_target_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             base = Path(temporary)
@@ -146,7 +201,7 @@ class PortableSkillTests(unittest.TestCase):
             skill = next((source / "skills").iterdir())
             (skill / "extra.md").write_text("Source-only dependency")
             with (skill / "SKILL.md").open("a") as instructions:
-                instructions.write("\nRead [extra instructions](extra.md).\n")
+                instructions.write('\nRead [extra instructions](extra.md "Source only").\n')
             output = base / "export"
             result = self.export(source, output)
             self.assertNotEqual(result.returncode, 0)
